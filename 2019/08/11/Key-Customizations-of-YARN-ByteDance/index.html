@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT">
+  <meta name="keywords" content="分享, YARN, hadoop meetup,">
 
 
 
@@ -79,13 +79,18 @@
 
 
 
-<meta property="og:type" content="website">
-<meta property="og:title" content="亚坤的博客">
-<meta property="og:url" content="http://yoursite.com/index.html">
+<meta name="description" content="国内首次hadoop meetup于2019-08-10日在北京举行, 吸引了大量互联网公司参加, 一些业内同学专门从深圳/上海/杭州飞来, 线上观看直播的更是达到了2000多人, 盛况空前. 参加这次会议除了可以一睹junping, wangda真身之外, 还能从会上学到满满的干货. 通过这次会议, 真是亲身感受到了hadoop已经落地到了各大公司, 尤其是新生的较为年青的公司的基础设施中. 正">
+<meta name="keywords" content="分享, YARN, hadoop meetup">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YARN关键定制@ByteDance">
+<meta property="og:url" content="http://yoursite.com/2019/08/11/Key-Customizations-of-YARN-ByteDance/index.html">
 <meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="国内首次hadoop meetup于2019-08-10日在北京举行, 吸引了大量互联网公司参加, 一些业内同学专门从深圳/上海/杭州飞来, 线上观看直播的更是达到了2000多人, 盛况空前. 参加这次会议除了可以一睹junping, wangda真身之外, 还能从会上学到满满的干货. 通过这次会议, 真是亲身感受到了hadoop已经落地到了各大公司, 尤其是新生的较为年青的公司的基础设施中. 正">
 <meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-11T06:28:13.370Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="亚坤的博客">
+<meta name="twitter:title" content="YARN关键定制@ByteDance">
+<meta name="twitter:description" content="国内首次hadoop meetup于2019-08-10日在北京举行, 吸引了大量互联网公司参加, 一些业内同学专门从深圳/上海/杭州飞来, 线上观看直播的更是达到了2000多人, 盛况空前. 参加这次会议除了可以一睹junping, wangda真身之外, 还能从会上学到满满的干货. 通过这次会议, 真是亲身感受到了hadoop已经落地到了各大公司, 尤其是新生的较为年青的公司的基础设施中. 正">
 
 
 
@@ -115,13 +120,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/">
+  <link rel="canonical" href="http://yoursite.com/2019/08/11/Key-Customizations-of-YARN-ByteDance/">
 
 
 
 
 
-  <title>亚坤的博客</title>
+  <title>YARN关键定制@ByteDance | 亚坤的博客</title>
   
 
 
@@ -140,8 +145,7 @@
     
   
 
-  <div class="container sidebar-position-left 
-  page-home">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -244,9 +248,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
 
@@ -276,9 +280,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/08/11/Key-Customizations-of-YARN-ByteDance/" itemprop="url">YARN关键定制@ByteDance</a></h1>
+          <h1 class="post-title" itemprop="name headline">YARN关键定制@ByteDance</h1>
         
 
         <div class="post-meta">
@@ -350,18 +352,36 @@
       
 
       
-        
-          
-          国内首次hadoop meetup于2019-08-10日在北京举行, 吸引了大量互联网公司参加, 一些业内同学专门从深圳/上海/杭州飞来, 线上观看直播的更是达到了2000多人, 盛况空前. 参加这次会议除了可以一睹junping, wangda真身之外, 还能从会上学到满满的干货. 通过这次会议
-          ...
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/08/11/Key-Customizations-of-YARN-ByteDance/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
+        <p>国内首次hadoop meetup于2019-08-10日在北京举行, 吸引了大量互联网公司参加, 一些业内同学专门从深圳/上海/杭州飞来, 线上观看直播的更是达到了2000多人, 盛况空前. 参加这次会议除了可以一睹junping, wangda真身之外, 还能从会上学到满满的干货. 通过这次会议, 真是亲身感受到了hadoop已经落地到了各大公司, 尤其是新生的较为年青的公司的基础设施中.</p>
+<p>正好前几天在公司内也进行了一次关于YARN的全面的分享, 称着这次机会, 代表团队介绍了一下3年来对YARN进行的一系列关键定制, 由于时间比较有限, 只摘选了公司内分享的部分内容, 主要包括四大方向: 利用率优化，多工作负荷优化，稳定性优化，异地多活.</p>
+<ul>
+<li>在利用率优化方向，又分为quota利用率和物理利用率两个子方向。<ul>
+<li>其中quota利用率优化主要是提升调度吞吐能力，降低资源碎片，提升单集群规模；</li>
+<li>物理利用率优化主要是对齐用户声明资源和实际使用资源的技术，还通过与流式/在线服务混部全面提升公司内机器的物理利用率。</li>
+</ul>
+</li>
+<li>在三种工作负荷(Training/Streaming/Batch)场景下都有一些体验提升的定制。<ul>
+<li>为Training/Streaming定制了一个新的调度器GangScheduler——支持All-or-nothing的语义、毫秒级别响应、带优先级和权重的多种强弱约束；</li>
+<li>为Training场景定制GPU卡和端口成为一种带ValueRange的调度资源及支持GPU&amp;Ceph的Docker；</li>
+<li>在Batch场景下通过高物理负载的跳过机制大大降低了FetchFailed比率。</li>
+</ul>
+</li>
+<li>稳定性提升方面主要包括摆脱对HDFS强依赖，根据Load或磁盘等非调度资源进行container分级与驱逐的机制，增加不受控container的清理机制。</li>
+<li>异地多活方面主要包括统一的YARN Client和UI等技术给用户更好的体验。</li>
+</ul>
+<p>具体分享内容如下:</p>
+
+
+	<div class="row">
+    <embed src="/pdfs/Key-Customizations-of-YARN-at-ByteDance_4_3.pdf" width="100%" height="550" type="application/pdf">
+	</div>
+
+
+
+
+<hr>
+<p>非常缺人是很认真的, 希望更多优秀的同学加入, 与我们一起做更加有挑战的事情.</p>
+
       
     </div>
     
@@ -376,14 +396,20 @@
 
     <footer class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/分享-YARN-hadoop-meetup/" rel="tag"># 分享, YARN, hadoop meetup</a>
+          
+        </div>
+      
+
+      
+      
+      
 
       
 
       
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </div>
@@ -393,10 +419,11 @@
   </article>
 
 
-    
-  </section>
 
-  
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
@@ -404,6 +431,10 @@
 
 
           
+
+  
+
+
 
         </div>
         
@@ -637,6 +668,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
 
   
 

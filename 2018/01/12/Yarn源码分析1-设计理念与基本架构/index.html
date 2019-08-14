@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="hadoop,yarn,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Yarn源码分析1-设计理念与基本架构《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记 Yarn源码小组讨论班2018-01-12 本文内容属于《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记, 外加一些个人的思考。 1 YARN产生背景最早的hadoop是由hdfs和mr组成的，hdfs负责存储，mr负责计算。 1.1 MRv1的局限性 扩展性差：mr中的">
+<meta name="keywords" content="hadoop,yarn">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Yarn源码分析1-设计理念与基本架构">
+<meta property="og:url" content="http://yoursite.com/2018/01/12/Yarn源码分析1-设计理念与基本架构/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="Yarn源码分析1-设计理念与基本架构《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记 Yarn源码小组讨论班2018-01-12 本文内容属于《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记, 外加一些个人的思考。 1 YARN产生背景最早的hadoop是由hdfs和mr组成的，hdfs负责存储，mr负责计算。 1.1 MRv1的局限性 扩展性差：mr中的">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-14T16:28:18.466Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Yarn源码分析1-设计理念与基本架构">
+<meta name="twitter:description" content="Yarn源码分析1-设计理念与基本架构《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记 Yarn源码小组讨论班2018-01-12 本文内容属于《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记, 外加一些个人的思考。 1 YARN产生背景最早的hadoop是由hdfs和mr组成的，hdfs负责存储，mr负责计算。 1.1 MRv1的局限性 扩展性差：mr中的">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/01/12/Yarn源码分析1-设计理念与基本架构/">
+
+
+
+
+
+  <title>Yarn源码分析1-设计理念与基本架构 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/01/12/Yarn源码分析1-设计理念与基本架构/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Yarn源码分析1-设计理念与基本架构</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-01-12T20:47:16+08:00">
+                2018-01-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/yarn/" itemprop="url" rel="index">
+                    <span itemprop="name">yarn</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Yarn源码分析1-设计理念与基本架构<br><em>《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记</em></p>
+<p>Yarn源码小组讨论班<br>2018-01-12</p>
+<p>本文内容属于《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记, 外加一些个人的思考。</p>
+<h1 id="1-YARN产生背景"><a href="#1-YARN产生背景" class="headerlink" title="1 YARN产生背景"></a>1 YARN产生背景</h1><p>最早的hadoop是由hdfs和mr组成的，hdfs负责存储，mr负责计算。</p>
+<h2 id="1-1-MRv1的局限性"><a href="#1-1-MRv1的局限性" class="headerlink" title="1.1 MRv1的局限性"></a>1.1 MRv1的局限性</h2><ul>
+<li>扩展性差：mr中的jobTracker同时负责资源管理和作业控制两个功能，成为瓶颈。</li>
+<li>可靠性差：mr中的master是单点的</li>
+<li>资源利用率低：基于槽的资源分配模型，通常一个任务不会用完一个槽位，并且Map slot和Reduce slot无法共享</li>
+<li>无法支持多种计算框架</li>
+</ul>
+<h2 id="1-2-Yarn的诞生"><a href="#1-2-Yarn的诞生" class="headerlink" title="1.2 Yarn的诞生"></a>1.2 Yarn的诞生</h2><p>传统的MR已经无法满足通用的计算需求，新的计算框架层出不穷，对于一家公司来说，希望能有一个统一的资源平台，在上面跑各种类型的计算任务，YARN就诞生了。</p>
+<p>YARN（Yet Another Resource Negotiator，另一种资源协调者）是一种新的Hadoop资源管理器，它是一个通用资源管理系统，可为上层应用提供统一的资源管理和调度，它的引入为集群在<strong>利用率</strong>、<strong>资源统一管理</strong>和<strong>数据共享</strong>等方面带来了巨大好处。</p>
+<ul>
+<li>MRv1和MRv2的区别<ul>
+<li>MRv1和MRv2有相同的编程模型和数据处理引擎</li>
+<li>最主要的不同是运行时环境的不同，MRv2跑在yarn上面，MRv1不被yarn管理</li>
+</ul>
+</li>
+</ul>
+<h1 id="2-YARN的基本架构"><a href="#2-YARN的基本架构" class="headerlink" title="2 YARN的基本架构"></a>2 YARN的基本架构</h1><p>yarn是hadoop 2.x的资源管理系统，基本思想是将MRv1中的JobTracker拆分成两个独立的服务：</p>
+<ul>
+<li>ResourceManager：管理全局资源</li>
+<li>ApplicationMaster：每个应用自己的管理器</li>
+</ul>
+<p>Yarn相当于是在物理机和计算引擎之间增加了一个资源抽象层。</p>
+<blockquote>
+<p>Tip: 在计算机领域，通过恰当的增加一层基本上可以解决任何问题</p>
+</blockquote>
+<h2 id="2-1-YARN基本组成"><a href="#2-1-YARN基本组成" class="headerlink" title="2.1 YARN基本组成"></a>2.1 YARN基本组成</h2><p>Yarn依然是Master/Slave的结构：</p>
+<ul>
+<li>在资源架构层面，ResourceManager是Master，NodeManager是Slave</li>
+<li>在应用运行期间，ApplicationMaster是Master，各个Container是Slave</li>
+</ul>
+<p>整个Yarn基本上由以下这些角色组成：</p>
+<p>ResourceManager(RM)，RM是全局的资源管理器，负责整个系统的资源管理和分配。由以下两部分组成：</p>
+<ul>
+<li>调度器：根据容量、队列限制条件将系统资源分配给各个应用<ul>
+<li>资源分配的单位是container，container是一个动态资源单位，它将内存、CPU、磁盘、网络等资源封装在一起，从而限定了资源使用量。</li>
+<li>调度器是一个可插拔的组件，用户可以自己定制，也可以选择Fair或Capacity调度器</li>
+</ul>
+</li>
+<li>应用程序管理器：负责管理所有应用程序的以下内容：<ul>
+<li>应用提交</li>
+<li>与调度器协商资源以启动AM</li>
+<li>监控AM运行状态并在失败时重启它</li>
+</ul>
+</li>
+</ul>
+<p>ApplicationMaster(AM)，用户提交的每个应用程序都需要包含一个AM，它的主要功能包括：</p>
+<ul>
+<li>与RM调度器协商以获取资源(以container为资源单位)</li>
+<li>将得到的任务进一步分配给内部的任务</li>
+<li>与NM通信以启动/停止任务</li>
+<li>监控所有任务运行状态，并在失败时重新为任务申请资源以重启任务</li>
+</ul>
+<blockquote>
+<p>Tips : 当前Yarn已经实现了三个AM：<br>    - DistributedShell：分布式的运行shell命令的一个示例<br>    - UnmanagedAM：AM不在集群内的情况示例<br>    - MRAppMaster:MapReduce应用的AM</p>
+</blockquote>
+<p>NodeManager(NM)，是每个节点上的资源和任务管理器</p>
+<ul>
+<li>定时向RM汇报本节点上的资源使用情况和各个container运行状态</li>
+<li>接收并处理来自AM的container启动/停止等请求</li>
+</ul>
+<p>Container，是Yarn中的资源抽象</p>
+<ul>
+<li>它封装了节点上多个维度的资源(目前Yarn只支持CPU和内存两种资源)</li>
+<li>它与slot的不同之处在于，slot是静态的(每个slot的资源相同)，container是动态的(每个container的资源可以不同)。</li>
+</ul>
+<h2 id="2-2-Yarn通信协议"><a href="#2-2-Yarn通信协议" class="headerlink" title="2.2 Yarn通信协议"></a>2.2 Yarn通信协议</h2><p>RPC是一个分布式系统的大动脉，徐鹏建议我们，想了解YARN，先从RPC协议开始，了解角色之间通信了哪些内容。</p>
+<p>在Yarn中的所有RPC协议，通信双方均有一端是client，另一端是Server，并且Client总是连接Server的。</p>
+<p>Yarn中的RPC共有以下5种，分别看一下：</p>
+<ul>
+<li>client与RM：(ApplicationClientProtocol)<ul>
+<li>JobClient通过该RPC提交应用程序、查询应用程序状态等</li>
+<li>源码位置：hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/ApplicationClientProtocol.java</li>
+</ul>
+</li>
+<li>admin与RM：(ResourceManagerAdministrationProtocol)<ul>
+<li>Admin通过该RPC更新系统配置文件，比如节点黑白名单、用户队列权限等</li>
+<li>源码位置：hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/server/api/ResourceManagerAdministrationProtocol.java</li>
+</ul>
+</li>
+<li>AM与RM：(ApplicationMasterProtocol)<ul>
+<li>AM通过该RPC向RM注册和注销自己，并为各个任务申请资源</li>
+<li>源码位置：hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/ApplicationMasterProtocol.java</li>
+</ul>
+</li>
+<li>AM与NM：(ContainerManagementProtocol)<ul>
+<li>AM通过该RPC要求NM启动或停止Container，获取各个container的状态等信息</li>
+<li>源码位置：hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/ContainerManagementProtocol.java</li>
+</ul>
+</li>
+<li>NM与RM：(ResourceTracker)<ul>
+<li>NM通过该RPC协议向RM注册，并定时发送心跳汇报当前节点的资源使用情况和Container运行情况</li>
+<li>源码位置：hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/src/main/java/org/apache/hadoop/yarn/server/api/ResourceTracker.java</li>
+</ul>
+</li>
+</ul>
+<h1 id="3-Yarn工作流程"><a href="#3-Yarn工作流程" class="headerlink" title="3 Yarn工作流程"></a>3 Yarn工作流程</h1><p>当用户向YARN中提交一个应用程序之后，Yarn分两大阶段运行该应用：</p>
+<ul>
+<li>第一个阶段是启动AM</li>
+<li>第二个阶段是由AM创建应用程序，为它申请资源，并监控运行过程，直到运行结束</li>
+</ul>
+<p>下面介绍一下包括这两大阶段的完整流程：</p>
+<ul>
+<li>步骤1：用户向YARN提交应用，其中包括AM、启动AM的命令、用户程序等</li>
+<li>步骤2：RM为该应用分配第一个Container，并与对应的NM通信，要求它在这个Container中启动应用的AM</li>
+<li>步骤3：AM向RM注册，这样用户可以通过RM查看应用的状态。然后AM为各个任务申请资源，并监控它的运行状态，直到运行结束，即重复以下步骤4～7</li>
+<li>步骤4：AM采用轮询的方式通过RPC协议向RM申请和领取资源</li>
+<li>步骤5：一旦AM获得资源，便与对应的NM通信，要求它启动任务</li>
+<li>步骤6：NM为任务设置好运行环境(包括环境变量、JAR包、二进制程序等)后，将任务启动命令写到一个脚本中，并通过该脚本启动任务</li>
+<li>步骤7：各个任务通过某个RPC协议向AM汇报自己的状态和进度，以让AM随时掌握状态，从而可以在任务失败时重启任务</li>
+<li>步骤8：应用程序运行完成后，AM向RM申请注销并关闭自己。</li>
+</ul>
+<p>以上这些步骤只是文字版本的描述，后续介绍状态机时，会再重新梳理每个步骤对应的状态改变，目前只是有个逻辑概念即可。</p>
+<h1 id="4-多个视角来看Yarn"><a href="#4-多个视角来看Yarn" class="headerlink" title="4 多个视角来看Yarn"></a>4 多个视角来看Yarn</h1><p>下面从并行编程、资源管理、云计算三个视角来看一下Yarn.</p>
+<ul>
+<li><p>并行编程：</p>
+<ul>
+<li>在单机上想更快的处理一份大数据集，一般需要使用多线程，大体流程一般是先由操作系统启动一个主线程，再由主线程负责数据切分、任务分配、子线程启动和销毁。</li>
+<li>Yarn应用其实与此类似，这里可以把Yarn看成是一个云操作系统，它负责为应用启动AM(相当于单机的主线程)，然后再由AM去负责数据切分、任务分配、启动和监控等工作。</li>
+</ul>
+</li>
+<li><p>资源管理系统：</p>
+<ul>
+<li>每种计算框架都有自己的优势，在没有哪一家都独霸天下之前，共存会是长态，如果各自使用一套集群，资源的利用率肯定是不如将所有计算资源统一抽象来使用的。</li>
+<li>YARN就是这样一个资源管理系统，它的出现弱化了计算框架之争，把计算框架与机器之间非常友好的隔离了一层(但是这样也会带来一些问题，比如Spark没有办法跑粗粒度等)</li>
+</ul>
+</li>
+<li><p>云计算：</p>
+<ul>
+<li><p>IaaS(Infrastructure-as-a-Service):基础设施即服务。</p>
+<ul>
+<li>基础设施包括：物理机、虚拟机、存储空间、网络连接、负载均衡、防火墙等基本计算资源。</li>
+<li>用户在这些基础之上部署和运行各种软件，包括操作系统和应用程序等</li>
+</ul>
+</li>
+<li><p>PaaS(Platform-as-a-Service):平台即服务。</p>
+<ul>
+<li>平台包括：操作系统、编程语言运行环境、数据库、Web服务器等</li>
+<li>用户可以平台上部署和运行自己的应用，通常而言，用户不能管理和控制底层的基础设施</li>
+</ul>
+</li>
+<li><p>SaaS(Software-as-a-Service):软件即服务。</p>
+<ul>
+<li>用户无需购买软件，而是直接向提供商租用基本Web的软件，和管理企业经营活动。</li>
+</ul>
+<p>从云的分层概念上来看，YARN可以被认为是PaaS层，它能为不同类型的应用提供统一的管理和调度。</p>
+</li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/hadoop/" rel="tag"># hadoop</a>
+          
+            <a href="/tags/yarn/" rel="tag"># yarn</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/01/17/Yarn源码分析2-ResourceManager剖析/" rel="prev" title="Yarn源码分析2-ResourceManager剖析1">
+                Yarn源码分析2-ResourceManager剖析1 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-YARN产生背景"><span class="nav-number">1.</span> <span class="nav-text">1 YARN产生背景</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-MRv1的局限性"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 MRv1的局限性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-Yarn的诞生"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 Yarn的诞生</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-YARN的基本架构"><span class="nav-number">2.</span> <span class="nav-text">2 YARN的基本架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-YARN基本组成"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 YARN基本组成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Yarn通信协议"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Yarn通信协议</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-Yarn工作流程"><span class="nav-number">3.</span> <span class="nav-text">3 Yarn工作流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-多个视角来看Yarn"><span class="nav-number">4.</span> <span class="nav-text">4 多个视角来看Yarn</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

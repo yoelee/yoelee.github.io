@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="hadoop,yarn,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
+<meta name="keywords" content="hadoop,yarn">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Yarn源码分析2-ResourceManager剖析1">
+<meta property="og:url" content="http://yoursite.com/2018/01/17/Yarn源码分析2-ResourceManager剖析/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-14T16:28:29.080Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Yarn源码分析2-ResourceManager剖析1">
+<meta name="twitter:description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/01/17/Yarn源码分析2-ResourceManager剖析/">
+
+
+
+
+
+  <title>Yarn源码分析2-ResourceManager剖析1 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/01/17/Yarn源码分析2-ResourceManager剖析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Yarn源码分析2-ResourceManager剖析1</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-01-17T20:47:16+08:00">
+                2018-01-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/yarn/" itemprop="url" rel="index">
+                    <span itemprop="name">yarn</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Yarn源码分析2-ResourceManager剖析1<br><em>《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。</em>  <em>(Yarn源码基于Hadoop 3.X)</em></p>
+<p>Yarn源码小组讨论班<br>2018-01-17</p>
+<p>ResourceManager(RM)是整个YARN集群的大脑  </p>
+<ul>
+<li>它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容：<ul>
+<li>第一次分享：概览</li>
+<li>第二次分享：专题分析(AM管理、NM管理、应用管理、状态机管理等)</li>
+</ul>
+</li>
+</ul>
+<h1 id="1-RM概述"><a href="#1-RM概述" class="headerlink" title="1. RM概述"></a>1. RM概述</h1><p>ResourceManager(RM)，RM是全局的资源管理器，负责整个系统的资源管理和分配。主要由以下两部分组成：</p>
+<ul>
+<li>调度器：根据容量、队列限制条件将系统资源分配给各个应用<ul>
+<li>资源分配的单位是container，container是一个动态资源单位，它将内存、CPU、磁盘、网络等资源封装在一起，从而限定了资源使用量。</li>
+<li>调度器是一个可插拔的组件，用户可以自己定制，也可以选择Fair或Capacity调度器</li>
+</ul>
+</li>
+<li>应用程序管理器：负责管理所有应用程序的以下内容：<ul>
+<li>应用提交</li>
+<li>与调度器协商资源以启动AM</li>
+<li>监控AM运行状态并在失败时重启它</li>
+</ul>
+</li>
+</ul>
+<h2 id="1-1-RM内部架构"><a href="#1-1-RM内部架构" class="headerlink" title="1.1 RM内部架构"></a>1.1 RM内部架构</h2><ul>
+<li><p>交互模块：RM对普通用户、管理员、Web提供了三种对外服务：</p>
+<ul>
+<li>ClientRMService:为普通用户提供服务，它处理来自客户端的各种RPC，比如<ul>
+<li>应用提交</li>
+<li>终止应用</li>
+<li>获取应用状态等</li>
+</ul>
+</li>
+<li>AdminService:为管理员提供的独立接口，主要目的是为了防止大量普通用户请求阻塞管理员通道，提供如下功能：<ul>
+<li>动态更新节点列表</li>
+<li>更新ACL列表</li>
+<li>更新队列信息等</li>
+</ul>
+</li>
+<li>WebApp:提供一个Web界面来让用户更友好的获知集群和应用的状态</li>
+</ul>
+</li>
+<li><p>NM管理模块：用来管理NM的模块，主要包含以下三个组件：</p>
+<ul>
+<li>ResourceTrackerService:处理来自NodeManager的请求，主要包括：<ul>
+<li>注册：注册是NM启动时发生的行为，NM提供的信息包括：<ul>
+<li>节点ID、可用资源上限信息等</li>
+</ul>
+</li>
+<li>心跳：心跳是周期行为<ul>
+<li>NM提供的信息包括：<ul>
+<li>各个Container运行状态、运行的Application列表、节点健康状态等</li>
+</ul>
+</li>
+<li>RM返回的信息包括：<ul>
+<li>等待释放的Container列表、Application列表等</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>NMLivelinessMonitor:监控NM是否活着，如果NM在一定时间(默认10m)内未上报心跳，则认为它死掉，需要移除</li>
+<li>NodesListManager:维护正常节点和异常节点列表，管理exclude(类似黑名单)和include(类似白名单)节点列表，这两个列表均是在配置文件中设置的，可以动态加载。</li>
+</ul>
+</li>
+<li><p>AM管理模块：主要是用来管理所有AM，主要包括：</p>
+<ul>
+<li>ApplicationMasterService(AMS):处理来自AM的请求，包括：<ul>
+<li>注册：是AM启动时发生的行为，信息包括：<ul>
+<li>AM的启动节点、对外RPC端口、tracking URL等</li>
+</ul>
+</li>
+<li>心跳：是周期行为<ul>
+<li>AM提供的信息包括：所需资源的描述、待释放Container列表、黑名单列表等</li>
+<li>AMS返回的信息包括：新分配的Container、失败的Container、待抢占的Container列表等</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>AMLivelinessMonitor:监控AM是否活着，如果AM在一定时间(默认10m)内未上报心路，则认为它死掉，它上面正在运行的Container将会被置为失败状态，而AM本身会被分配到另一个节点上(用户可以指定重试次数，默认5)</li>
+<li>ApplicationMasterLauncher：与某个NM通信，要求它为某个应用程序启动AM</li>
+</ul>
+</li>
+<li><p>应用管理模块：主要是各个应用外围的管理，并不涉及到应用内部</p>
+<ul>
+<li>ApplicationACLsManager:管理应用程序访问权限，包含两部分：<ul>
+<li>查看权限：主要用于查看应用程序基本信息</li>
+<li>修改权限：主要用于修改应用程序优先级、杀死应用程序等</li>
+</ul>
+</li>
+<li>RMAppManager:管理应用程序的启动和关闭</li>
+<li>ContainerAllocationExpirer:当AM收到RM新分配的Container后，必须在一定时间(默认10m)内在对应的NM上启动该Container，否则RM将强制回收该Container，而一个已经分配的Container是否该被回收则是由ContainerAllocationExpirer决定和执行的</li>
+</ul>
+</li>
+<li><p>状态机管理模块：RM使用有限状态机维护有状态对象的生命周期，状态机的引入使得Yarn的架构设计清晰，RM内部的状态机有：</p>
+<ul>
+<li>RMApp:维护一个应用程序的整个运行周期，包括从启动到运行结束的整个过程<ul>
+<li>由于一个APP的生命周期可能会启动多个运行实例(Attempt)，RMApp维护的是所有的这些Attempt</li>
+</ul>
+</li>
+<li>RMAppAttempt:一次应用程序的运行实例的整个生命周期，可以理解为APP的一次尝试运行</li>
+<li>RMContainer:一个Container的运行周期，包括从创建到运行结束的整个过程。<ul>
+<li>RM将资源封装成Container发送给应用程序的AM，AM在Container描述的运行环境中启动任务</li>
+<li>Yarn不支持Container重用，一个Container用完后会立刻释放</li>
+</ul>
+</li>
+<li>RMNode:维护了一个NM的生命周期，包括从启动到运行结束的整个过程</li>
+</ul>
+</li>
+<li><p>安全模块：RM自带了非常全面的权限管理机制，主要包括：</p>
+<ul>
+<li>ClientToAMSecretManager</li>
+<li>ContainerTokenSecretManager</li>
+<li>ApplicationTokenSecretManager</li>
+<li>等，由于这块非常复杂，可以找个专题讨论，这里先不展开</li>
+</ul>
+</li>
+<li><p>调度模块：主要包含一个组件ResourceScheduler。</p>
+<ul>
+<li>是资源调度器，它按照一定的约束条件(比如队列容量限制等)将集群中的资源分配给各个应用程序，目前主要考虑内存和CPU</li>
+<li>ResourceScheduler是一个可插拔式的模块，自带三个调度器，用户可以自己定制。<ul>
+<li>FIFO：先进先出，单用户</li>
+<li>Fair Scheduler:公平调度器(FairScheduler基本上具备其它两种的所有功能)</li>
+<li>Capacity Scheduler:容量调度器</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="1-2-RM事件与事件处理器"><a href="#1-2-RM事件与事件处理器" class="headerlink" title="1.2 RM事件与事件处理器"></a>1.2 RM事件与事件处理器</h2><p>Yarn采用了事件驱动机制，而RM是的实现则是最好的例证。所有服务和组件均是通过中央异步调度器组织在一起的，不同组件之间通过事件交互，从而实现了一个异步并行的高效系统。</p>
+<p>下面是详细的表格：</p>
+<table>
+<thead>
+<tr>
+<th align="left">序号</th>
+<th align="left">组件名称</th>
+<th align="left">服务/事件处理器</th>
+<th align="left">处理的事件类型</th>
+<th align="left">输出事件类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">1</td>
+<td align="left">ClientRMService</td>
+<td align="left">服务</td>
+<td align="left">–</td>
+<td align="left">RMAppAttemptEvent<br>RMAppEvent<br>RMNodeEvent</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">NMLivelinessMonitor</td>
+<td align="left">服务</td>
+<td align="left">–</td>
+<td align="left">RMNodeEvent</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">ResourceTrackerService</td>
+<td align="left">服务</td>
+<td align="left">–</td>
+<td align="left">RMNodeEvent<br>RMAppAttemptEvent</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">AMLivelinessMonitor</td>
+<td align="left">服务</td>
+<td align="left">–</td>
+<td align="left">RMAppAttemptEvent</td>
+</tr>
+<tr>
+<td align="left">5</td>
+<td align="left">ContainerAllocationExpirer</td>
+<td align="left">服务</td>
+<td align="left">–</td>
+<td align="left">SchedulerEvent</td>
+</tr>
+<tr>
+<td align="left">6</td>
+<td align="left">ApplicationMasterLauncher</td>
+<td align="left">事件处理器</td>
+<td align="left">AMLauncherEvent</td>
+<td align="left">–</td>
+</tr>
+<tr>
+<td align="left">7</td>
+<td align="left">RMAppManager</td>
+<td align="left">事件处理器</td>
+<td align="left">RMAppManagerEvent</td>
+<td align="left">RMAppEvent</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">NodesListManager</td>
+<td align="left">事件处理器</td>
+<td align="left">NodesListManagerEvent</td>
+<td align="left">RMNodeEvent<br>RMAppEvent</td>
+</tr>
+<tr>
+<td align="left">9</td>
+<td align="left">RMApp<br>(ApplicationEventDispatcher)<br>(RMAppImpl)</td>
+<td align="left">事件处理器</td>
+<td align="left">RMAppEvent</td>
+<td align="left">RMAppAttemptEvent<br>RMNodeEvent<br>SchedulerEvent<br>RMAppManagerEvent</td>
+</tr>
+<tr>
+<td align="left">10</td>
+<td align="left">RMAppAttempt<br>(ApplicationAttemptEventDispatcher)<br>(RMAppAttemptImpl)</td>
+<td align="left">事件处理器</td>
+<td align="left">RMAppAttemptEvent</td>
+<td align="left">SchedulerEvent<br>RMAppAttemptEvent<br>RMAppEvent<br>AMLauncherEvent<br>RMNodeEvent</td>
+</tr>
+<tr>
+<td align="left">11</td>
+<td align="left">RMNode<br>(NodeEventDispatcher)<br>(RMNodeImpl)</td>
+<td align="left">事件处理器</td>
+<td align="left">RMNodeEvent</td>
+<td align="left">RMAppEvent<br>SchedulerEvent<br>NodesListManagerEvent<br>RMNodeEvent</td>
+</tr>
+<tr>
+<td align="left">12</td>
+<td align="left">ResourceScheduler<br>(EventDispatcher)<br>(FairScheduler)</td>
+<td align="left">事件处理器</td>
+<td align="left">SchedulerEvent</td>
+<td align="left">RMAppEvent<br>RMAppAttemptEvent</td>
+</tr>
+<tr>
+<td align="left">13</td>
+<td align="left">RMContainer<br>(RMContainerImpl)</td>
+<td align="left">事件处理器(非异步)</td>
+<td align="left">RMContainerEvent</td>
+<td align="left">RMAppEvent<br>RMAppAttemptEvent<br>RMNodeEvent</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="End"><a href="#End" class="headerlink" title="End"></a>End</h1>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/hadoop/" rel="tag"># hadoop</a>
+          
+            <a href="/tags/yarn/" rel="tag"># yarn</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/01/12/Yarn源码分析1-设计理念与基本架构/" rel="next" title="Yarn源码分析1-设计理念与基本架构">
+                <i class="fa fa-chevron-left"></i> Yarn源码分析1-设计理念与基本架构
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/01/26/Yarn源码分析3-NodeManager剖析1/" rel="prev" title="Yarn源码分析3-NodeManager剖析1">
+                Yarn源码分析3-NodeManager剖析1 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-RM概述"><span class="nav-number">1.</span> <span class="nav-text">1. RM概述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-RM内部架构"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 RM内部架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-RM事件与事件处理器"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 RM事件与事件处理器</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#End"><span class="nav-number">2.</span> <span class="nav-text">End</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

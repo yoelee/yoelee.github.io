@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="hadoop,yarn,scheduler,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Yarn源码分析3-NodeManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.0.0) Yarn源码小组讨论班2018-01-26 NM是单个计算节点的管理服务，它的主要功能包括：  与RM保持通信 管理Container生命周期 监控每个Container的资源使用情况 追踪节点健康状况 管理日志 管理不同应用用到的">
+<meta name="keywords" content="hadoop,yarn,scheduler">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Yarn源码分析3-NodeManager剖析1">
+<meta property="og:url" content="http://yoursite.com/2018/01/26/Yarn源码分析3-NodeManager剖析1/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="Yarn源码分析3-NodeManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.0.0) Yarn源码小组讨论班2018-01-26 NM是单个计算节点的管理服务，它的主要功能包括：  与RM保持通信 管理Container生命周期 监控每个Container的资源使用情况 追踪节点健康状况 管理日志 管理不同应用用到的">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-14T16:28:38.386Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Yarn源码分析3-NodeManager剖析1">
+<meta name="twitter:description" content="Yarn源码分析3-NodeManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.0.0) Yarn源码小组讨论班2018-01-26 NM是单个计算节点的管理服务，它的主要功能包括：  与RM保持通信 管理Container生命周期 监控每个Container的资源使用情况 追踪节点健康状况 管理日志 管理不同应用用到的">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/01/26/Yarn源码分析3-NodeManager剖析1/">
+
+
+
+
+
+  <title>Yarn源码分析3-NodeManager剖析1 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/01/26/Yarn源码分析3-NodeManager剖析1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Yarn源码分析3-NodeManager剖析1</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-01-26T20:47:16+08:00">
+                2018-01-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/hadoop/yarn/" itemprop="url" rel="index">
+                    <span itemprop="name">yarn</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Yarn源码分析3-NodeManager剖析1<br><em>《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。</em>  <em>(Yarn源码基于Hadoop 3.0.0)</em></p>
+<p>Yarn源码小组讨论班<br>2018-01-26</p>
+<p>NM是单个计算节点的管理服务，它的主要功能包括：</p>
+<ul>
+<li>与RM保持通信</li>
+<li>管理Container生命周期</li>
+<li>监控每个Container的资源使用情况</li>
+<li>追踪节点健康状况</li>
+<li>管理日志</li>
+<li>管理不同应用用到的附属服务(auxiliary service)</li>
+</ul>
+<h1 id="1-交互协议"><a href="#1-交互协议" class="headerlink" title="1. 交互协议"></a>1. 交互协议</h1><p>主要包括两方面的内容：</p>
+<ul>
+<li>与RM交互</li>
+<li>与AM交互</li>
+</ul>
+<h2 id="1-1-与RM交互"><a href="#1-1-与RM交互" class="headerlink" title="1.1 与RM交互"></a>1.1 与RM交互</h2><p>NM通过ResourceTracker协议向RM进行RPC交互，其中NM是client角色，RM是server角色。</p>
+<p>NM与RM的交互采用的是pull模型，即NM总是周期性的主动向RM发起请求并领取下发命令。</p>
+<p>ResourceTracker协议提供了下面三个RPC函数：</p>
+<h3 id="1-1-1-RPC1-registerNodeManager"><a href="#1-1-1-RPC1-registerNodeManager" class="headerlink" title="1.1.1 RPC1 : registerNodeManager"></a>1.1.1 RPC1 : registerNodeManager</h3><p>NM启动时通过该RPC向RM进行注册，注册信息包括：</p>
+<ul>
+<li>nodeId, httpPort, resource, nmVersion, containerStatus, runningApplications, nodeLabels, physicalResource</li>
+</ul>
+<p>RM会通过这个RPC调用返回如下信息：</p>
+<ul>
+<li>nodeToken的MasterKey</li>
+<li>containerToken的MasterKey</li>
+<li>nodeAction：要执行的动作，包括注册成功、重新同步信息、停止运行</li>
+<li>rmIdentifier：rm的标示符，在rm重启恢复或HA切换时，用来判断container来自原始的，还是新的rm</li>
+<li>diagnosticsMessage：在nm收到重新同步或停止运行的action时，会带上诊断信息</li>
+<li>rmVersion：rm版本</li>
+<li>resource：由RM读取本地文件dynamic-resources.xml中此节点的信息来指定此节点的资源容量</li>
+<li>areNodeLabelsAcceptedByRM：nodeLabels是否被RM接受</li>
+</ul>
+<h3 id="1-1-2-RPC2-nodeHeartbeat"><a href="#1-1-2-RPC2-nodeHeartbeat" class="headerlink" title="1.1.2 RPC2 : nodeHeartbeat"></a>1.1.2 RPC2 : nodeHeartbeat</h3><p>NM启动后，定期通过该RPC向RM汇报Container运行信息和节点健康状况，并领取来自RM的命令，比如杀死一个Container。后面再详细介绍。</p>
+<h3 id="1-1-3-RPC3-unRegisterNodeManager"><a href="#1-1-3-RPC3-unRegisterNodeManager" class="headerlink" title="1.1.3 RPC3 : unRegisterNodeManager"></a>1.1.3 RPC3 : unRegisterNodeManager</h3><p>NM注销的接口，向RM发送nmId，然后RM执行相关清理工作。</p>
+<h2 id="1-2-与AM交互"><a href="#1-2-与AM交互" class="headerlink" title="1.2 与AM交互"></a>1.2 与AM交互</h2><p>NM通过ContainerManagementProtocol协议与应用的AM进行交互，其中NM是server角色，AM是client角色。</p>
+<p>NM与AM之间的交互使用的是push模型，AM可以将Container相关的操作第一时间发给NM，大大降低了延迟。</p>
+<p>ContainerManagementProtocol协议主要提供了以下RPC函数：</p>
+<ul>
+<li>startContainers:要求启动一批container</li>
+<li>stopContainers:要求停止一批container</li>
+<li>getContainerStatuses:获得NM上自己应用内的所有Container的状态</li>
+<li>increaseContainersResource:要求为containers增加资源</li>
+<li>updateContainer:为运行中的container更新资源</li>
+<li>signalToContainer:向Container发送一个信号，包括：OUTPUT_THREAD_DUMP、GRACEFUL_SHUTDOWN、FORCEFUL_SHUTDOWN</li>
+<li>localize:进行资源的本地化</li>
+<li>reInitializeContainer:使用新的ContainerLaunchContext来重启初始化container</li>
+<li>restartContainer:重启container</li>
+<li>rollbackLastReInitialization:回滚上次的reInitialize</li>
+<li>commitLastReInitialization:commit上次的reInitialize，一旦commit就不能回滚了</li>
+</ul>
+<h1 id="2-NM内部架构"><a href="#2-NM内部架构" class="headerlink" title="2. NM内部架构"></a>2. NM内部架构</h1><ul>
+<li><p>NMContainerTokenSecretManager:</p>
+<ul>
+<li>检查收到的各种访问Container请求的合法性，确保这些请求操作已经被RM授权</li>
+</ul>
+</li>
+<li><p>NMTokenSecretManagerInNM:</p>
+<ul>
+<li>NM的Token管理</li>
+</ul>
+</li>
+<li><p>ApplicationACLsManager：</p>
+<ul>
+<li>确保用户请求的资源被RM授权过</li>
+</ul>
+</li>
+<li><p>ContainerExecutor：</p>
+<ul>
+<li>可与底层操作系统交互，安全存放Container需要的文件和目录，进而以一种安全的方式启动和清除Container对应的进程。目前Yarn提供了DefaultContainerExecutor和LinuxContainerExecutor两种实现。<ul>
+<li>DefaultContainerExecutor是默认实现，提供了一个通用的Container执行服务，未提供任何安全措施</li>
+<li>LinuxContainerExecutor则以应用程序拥有者的身份启动和停止Container，因此更加安全，此外，LinuxContainerExecutor允许用户通过Cgroups对CPU进行资源隔离，并且支持Docker</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>DeletionService：</p>
+<ul>
+<li>一个专门的文件删除服务异步删除失效文件，这样可避免同步删除带来的性能开销。</li>
+<li>有一个delete.debug-delay-sec的参数可以控制任务结束之后文件的保留时间</li>
+</ul>
+</li>
+<li><p>AsyncDispatcher:NodeManager级别的异步的事件分发</p>
+<ul>
+<li>ContainerManagerEventType：由ContainerManagerImpl处理</li>
+<li>NodeManagerEventType：由NodeManager处理</li>
+</ul>
+</li>
+<li><p>LocalDirsHandlerService：</p>
+<ul>
+<li>用来检查local-dirs和log-dirs的健康情况</li>
+<li>健康是标准是有读、写、执行权限</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>NodeHealthCheckerService<ul>
+<li>通过周期性了进行一个自定义脚本检查节点的健康状态，并通过NodeStatusUpdater传递给RM。一旦RM发现一个节点处于不健康状态，则会将它加入黑名单，此后不再为它分配任务，直到再次转为健康状态。需要注意，加入黑名单后，正在运行的Container仍会正常运行，不会被杀死。</li>
+<li>只需要配置脚本在被NM执行后在标准输出中打印ERROR开头的字符串即可被认为是unhealthy。</li>
+<li>常用的功能包括：<ul>
+<li>可作为节点负载的反馈。由于目前只对CPU和内存进行了隔离，可以在磁盘、网络等资源紧张时设置为unhealthy</li>
+<li>可作为人为暂时维护的方法。如果发现机器出现问题，可以人为控制该脚本，让NM暂时不接收新的任务</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>NodeLabelsProvider:提供了获取node label的接口，目前有两种实现：<ul>
+<li>ConfigurationNodeLabelsProvider：通过定期读取配置文件来得到Label</li>
+<li>ScriptBasedNodeLabelsProvider：通过定期执行脚本来得到Label</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><p>NodeStatusUpdater:是NM与RM通信的唯一通道。当NM启动时，该模块向RM注册，之后周期性的进行通信。</p>
+<ul>
+<li>NM上报的信息是NodeHeartbeatRequest：<ul>
+<li>Container CurrentKey: Container认证信息</li>
+<li>NM CurrentKey：NM认证信息</li>
+<li>nodeLabels:节点的lables</li>
+<li>registeringCollectors：收集应用信息，在timeline service v.2中使用</li>
+<li>nodeStatus:节点状态<ul>
+<li>NodeHealthStatus：包括是否Heath，以及unhealth时的状态报告信息</li>
+<li>ContainerStatus：当前NM上Container的状态</li>
+<li>containersUtilization：Container声明的资源占用情况</li>
+<li>nodeUtilization：NM被声明的资源占用情况</li>
+<li>increasedContainers：获得自上次心跳以来，占用资源有所增长的Container</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>(接上)NodeStatusUpdater:</p>
+<ul>
+<li>RM返回的信息是NodeHeartbeatResponse<ul>
+<li>NodeAction：包括NORMAL, RESYNC, SHUTDOWN</li>
+<li>ContainersToCleanup：要清理的Containers</li>
+<li>ContainersToBeRemovedFromNM：要从NM中remove的Containers</li>
+<li>ApplicationsToCleanup：要清理的Application</li>
+<li>AppCollectors：告诉NM一些应用Collector的地址，为timeline service v.2提供数据</li>
+<li>ContainerTokenMasterKey：Container的认证信息</li>
+<li>NMTokenMasterKey：NM的认证信息</li>
+<li>ContainersToSignalList：要发信号的Container列表</li>
+<li>NextHeartBeatInterval：下一个心跳的间隔</li>
+<li>DiagnosticsMessage：诊断信息</li>
+<li>SystemCredentialsForApps：系统级别的证书(比如HDFS的Token)，给资源本地化和日志收集使用</li>
+<li>AreNodeLabelsAcceptedByRM：节点的Label是否被RM接收了</li>
+<li>Resource：要更新的Resource的数量(在动态更新的情况下)</li>
+<li>ContainersToUpdate：需要更新的Container</li>
+<li>ContainerQueuingLimit：乐观的Container队列的等待长度和时间</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>ContainerManagerImpl：本身实现了ContainerManagementProtocol协议，负责与AM的通信。</p>
+<ul>
+<li>ResourceLocalizationService:负责Container所需求资源的本地化。能按照描述从HDFS上下载Container所需的文件资源，并尽量将它们分摊到各个磁盘上以防止出现访问热点。此外，它会为下载的文件添加访问控制限制，并为之施加合适的磁盘空间使用份额。</li>
+<li>ContainerLauncher:维护了一个线程池以并行完成Container相关操作，比如启动或者杀死Container，其中启动Container请求是由AM发起的，而杀死Container请求可能来自AM或RM</li>
+<li>ContainerScheduler：管理着运行时的Container，确保一个container只有在满足条件的情况下才能启动，并且确定在GUARANTEED container需要资源时，把OPPORTUNISTIC container杀死</li>
+<li>AuxServices:NM允许用户通过配置附属服务的方式扩展自己的功能，这样可以定制一些特定的框架需要的服务，这些服务由NM统一启动与关闭，典型的应用是MR中用的Shuffle HTTP Server</li>
+<li>ContainersMonitor:负责监控资源使用量。周期性探测运行中的资源利用量，一时超过上限，就发送信号杀掉，只有内存是通过监控方式来限制的，CPU是通过Cgroups限制的。</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><p>(接上)ContainerManagerImpl：</p>
+<ul>
+<li>LogHandler:一个可插拔组件，用户可通过它控制Container日志的保存方式，是写到本地磁盘还是将其打包上传到一个文件系统中</li>
+<li>SharedCacheUploadService：可以把本地的文件放到共享的cache中</li>
+<li>AMRMProxyService：用来监测和审查AM到RM的消息</li>
+<li>ContainerEventDispatcher:Container事件调度器，负责将ContainerEvent类型的事件调度给对应的Container的状态机</li>
+<li>ApplicationEventDispatcher:应用的事件调度器，负责将ApplicationEvent类型的事件调度给对应的Appplication状态机</li>
+<li>AsyncDispatcher：ContainerManager级别的异步事件分发器，其中：<ul>
+<li>ContainerEventType：由ContainerEventDispatcher处理</li>
+<li>ApplicationEventType：由ApplicationEventDispatcher处理</li>
+<li>LocalizationEventType：由ResourceLocalizationService处理</li>
+<li>AuxServicesEventType：由AuxServices处理</li>
+<li>ContainersMonitorEventType：由ContainersMonitor处理</li>
+<li>ContainersLauncherEventType：由ContainerLauncher处理</li>
+<li>ContainerSchedulerEventType：由ContainerScheduler处理</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>NodeResourceMonitor：</p>
+<ul>
+<li>用来监控机器资源的使用情况，用来给NodeStatusUpdater上报到RM</li>
+</ul>
+</li>
+<li><p>WebServer：</p>
+<ul>
+<li>通过Web界面向用户展示该节点所有应用程序运行状态、Container列表、节点健康状态和Container产生的日志等信息</li>
+</ul>
+</li>
+<li><p>OpportunisticContainerAllocator：</p>
+<ul>
+<li>可以利用节点上已分配但未真正使用的资源，原有Container类型定义为GUARANTEED类型，优先保证GUARANTEED类型的Container正常运行</li>
+</ul>
+</li>
+<li><p>JvmPauseMonitor：</p>
+<ul>
+<li>一个简单的周期定时线程，如果启动时间明显比预期要长证明当前JVM或机器出现问题</li>
+</ul>
+</li>
+<li><p>NMCollectorService：</p>
+<ul>
+<li>用来收集信息的服务，在timeline service v2打开时会启动</li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/hadoop/" rel="tag"># hadoop</a>
+          
+            <a href="/tags/yarn/" rel="tag"># yarn</a>
+          
+            <a href="/tags/scheduler/" rel="tag"># scheduler</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/01/17/Yarn源码分析2-ResourceManager剖析/" rel="next" title="Yarn源码分析2-ResourceManager剖析1">
+                <i class="fa fa-chevron-left"></i> Yarn源码分析2-ResourceManager剖析1
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/02/24/Yarn源码分析4-资源调度算法/" rel="prev" title="Yarn源码分析4-资源调度算法">
+                Yarn源码分析4-资源调度算法 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-交互协议"><span class="nav-number">1.</span> <span class="nav-text">1. 交互协议</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-与RM交互"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 与RM交互</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-1-RPC1-registerNodeManager"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1.1 RPC1 : registerNodeManager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-2-RPC2-nodeHeartbeat"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.1.2 RPC2 : nodeHeartbeat</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-3-RPC3-unRegisterNodeManager"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.1.3 RPC3 : unRegisterNodeManager</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-与AM交互"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 与AM交互</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-NM内部架构"><span class="nav-number">2.</span> <span class="nav-text">2. NM内部架构</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

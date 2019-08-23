@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="序列化, 压缩,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="序列化与压缩 Hadoop生态学习小组-liyakun.hit2018-04-12 写这篇文章的原因是，很多人搞不清楚序列化、压缩、列式存储都是什么概念。所以，补一篇文章来科普一下，这样整体的概念更多一些，能了解各项技术所处的位置。 1. 序列化1.1 RPC如果不同进程之间想交换内存中的数据，需要怎么做？ 这就是IPC技术，有很多种，一种比较简单易想到的做法是通过磁盘\网络IO来做：  磁盘：一">
+<meta name="keywords" content="序列化, 压缩">
+<meta property="og:type" content="article">
+<meta property="og:title" content="序列化与压缩">
+<meta property="og:url" content="http://yoursite.com/2018/04/12/2018-04-12_序列化与压缩/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="序列化与压缩 Hadoop生态学习小组-liyakun.hit2018-04-12 写这篇文章的原因是，很多人搞不清楚序列化、压缩、列式存储都是什么概念。所以，补一篇文章来科普一下，这样整体的概念更多一些，能了解各项技术所处的位置。 1. 序列化1.1 RPC如果不同进程之间想交换内存中的数据，需要怎么做？ 这就是IPC技术，有很多种，一种比较简单易想到的做法是通过磁盘\网络IO来做：  磁盘：一">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-23T05:48:56.191Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="序列化与压缩">
+<meta name="twitter:description" content="序列化与压缩 Hadoop生态学习小组-liyakun.hit2018-04-12 写这篇文章的原因是，很多人搞不清楚序列化、压缩、列式存储都是什么概念。所以，补一篇文章来科普一下，这样整体的概念更多一些，能了解各项技术所处的位置。 1. 序列化1.1 RPC如果不同进程之间想交换内存中的数据，需要怎么做？ 这就是IPC技术，有很多种，一种比较简单易想到的做法是通过磁盘\网络IO来做：  磁盘：一">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/04/12/2018-04-12_序列化与压缩/">
+
+
+
+
+
+  <title>序列化与压缩 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/12/2018-04-12_序列化与压缩/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">序列化与压缩</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-04-12T10:35:23+08:00">
+                2018-04-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/存储/" itemprop="url" rel="index">
+                    <span itemprop="name">存储</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>序列化与压缩</p>
+<p>Hadoop生态学习小组-liyakun.hit<br>2018-04-12</p>
+<p>写这篇文章的原因是，很多人搞不清楚序列化、压缩、列式存储都是什么概念。所以，补一篇文章来科普一下，这样整体的概念更多一些，能了解各项技术所处的位置。</p>
+<h1 id="1-序列化"><a href="#1-序列化" class="headerlink" title="1. 序列化"></a>1. 序列化</h1><h2 id="1-1-RPC"><a href="#1-1-RPC" class="headerlink" title="1.1 RPC"></a>1.1 RPC</h2><p>如果不同进程之间想交换内存中的数据，需要怎么做？</p>
+<p>这就是IPC技术，有很多种，一种比较简单易想到的做法是通过磁盘\网络IO来做：</p>
+<ul>
+<li>磁盘：一个进程写到指定的文件位置，另一个进程不停的去读相同的文件</li>
+<li>网络(RPC)：两个进程建立socket，然后通过socket互相传输数据</li>
+</ul>
+<p>对一个分布式系统来说，RPC是不可或缺的。</p>
+<p>RPC的效率对一个分布式系统来说非常重要。</p>
+<h2 id="1-2-RPC效率优化"><a href="#1-2-RPC效率优化" class="headerlink" title="1.2 RPC效率优化"></a>1.2 RPC效率优化</h2><p>只考虑软件层面：</p>
+<ul>
+<li>减少要传输的文件体积</li>
+<li>加快压缩和解压的过程</li>
+</ul>
+<p>像Java,Python这类的语言，天生就自带把对象序列化成文本，再把文本反序列化的工具。</p>
+<p>无论是体积还在速度都还不错，并且还在进一步的优化之中。</p>
+<p>但是，RPC经常会遇到一个问题：</p>
+<p>就是两端的编程语言经常不同，比如python连接java，scala，C/C++。</p>
+<p>于是，出现了一种技术：数据交换协议</p>
+<ul>
+<li>两个系统要交换数据，需要定义一种双方都明白的协议，我们称为”数据交换协议”</li>
+</ul>
+<h2 id="1-3-常见的数据交换协议"><a href="#1-3-常见的数据交换协议" class="headerlink" title="1.3 常见的数据交换协议"></a>1.3 常见的数据交换协议</h2><table>
+<thead>
+<tr>
+<th>协议</th>
+<th>实现</th>
+<th>跨语言</th>
+<th>性能</th>
+<th>传输量</th>
+<th>RPC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>xml</td>
+<td>广泛</td>
+<td>几乎所有</td>
+<td>低</td>
+<td>很大</td>
+<td>N</td>
+</tr>
+<tr>
+<td>json</td>
+<td>广泛</td>
+<td>大量</td>
+<td>一般</td>
+<td>一般</td>
+<td>N</td>
+</tr>
+<tr>
+<td>thrift</td>
+<td>thrift</td>
+<td>大量</td>
+<td>高</td>
+<td>小</td>
+<td>Y</td>
+</tr>
+<tr>
+<td>protobuf</td>
+<td>protobuf</td>
+<td>较少</td>
+<td>高</td>
+<td>小</td>
+<td>N</td>
+</tr>
+<tr>
+<td>avro</td>
+<td>Apache Avro</td>
+<td>较少</td>
+<td>高</td>
+<td>小</td>
+<td>Y</td>
+</tr>
+</tbody></table>
+<ul>
+<li><p>首先明确一点，所有数据交换协议都是可以跨语言的，尽管有多跨的多，有的少。</p>
+</li>
+<li><p>然后说一下不同的地方：</p>
+<ul>
+<li>xml,json是单纯的数据交换协议，所以无论是发送端，还是接受端都需要在内存中对数据进行加工，带来的结果是性能很差。</li>
+<li>thrift\protobuf\avro为各种语言提供了类库，可以把它们的内存对象直接序列化为文本流，在接收端再把这些文本流重新组装成内存中的对象结构，效率会高非常多<ul>
+<li>thrift支持语言多，有RPC类库，支持向前\后兼容，不支持动态修改schema</li>
+<li>pb支持5种语言，无RPC类库，支持向前\后兼容，不支持动态修改schema</li>
+<li>avro支持4种语言，有RPC类库，支持动态修改schema，只支持Avro自己的序列化格式，目前应用少</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="1-4-序列化示例-pickle"><a href="#1-4-序列化示例-pickle" class="headerlink" title="1.4 序列化示例-pickle"></a>1.4 序列化示例-pickle</h2><p>下面以python自带的序列化、反序列工具pickle来简单了解一下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pickle</span><br><span class="line">obj = &#123;<span class="string">"a"</span>: <span class="number">1</span>, <span class="string">"b"</span>: <span class="number">2</span>, <span class="string">"c"</span>: <span class="number">3</span>&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># 将 obj 持久化保存到文件 tmp.txt 中</span></span><br><span class="line">pickle.dump(obj, open(<span class="string">"tmp.txt"</span>, <span class="string">"w"</span>))</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> open(<span class="string">"tmp.txt"</span>) <span class="keyword">as</span> f:</span><br><span class="line">    lines = f.readlines()</span><br><span class="line">    <span class="keyword">print</span> str(lines)</span><br></pre></td></tr></table></figure>
+
+<pre><code>[&apos;(dp0\n&apos;, &quot;S&apos;a&apos;\n&quot;, &apos;p1\n&apos;, &apos;I1\n&apos;, &quot;sS&apos;c&apos;\n&quot;, &apos;p2\n&apos;, &apos;I3\n&apos;, &quot;sS&apos;b&apos;\n&quot;, &apos;p3\n&apos;, &apos;I2\n&apos;, &apos;s.&apos;]</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 从 tmp.txt 中读取并恢复 obj 对象</span></span><br><span class="line">obj2 = pickle.load(open(<span class="string">"tmp.txt"</span>, <span class="string">"r"</span>))</span><br><span class="line"> </span><br><span class="line"><span class="keyword">print</span> obj2</span><br></pre></td></tr></table></figure>
+
+<pre><code>{&apos;a&apos;: 1, &apos;c&apos;: 3, &apos;b&apos;: 2}</code></pre><h1 id="2-压缩"><a href="#2-压缩" class="headerlink" title="2. 压缩"></a>2. 压缩</h1><h2 id="2-1-为什么需要压缩算法"><a href="#2-1-为什么需要压缩算法" class="headerlink" title="2.1 为什么需要压缩算法"></a>2.1 为什么需要压缩算法</h2><p>数据量越来越大会带来两个问题：</p>
+<ol>
+<li>物理存储空间不够</li>
+<li>数据加载时磁盘IO过大，数据传输时网络IO过大，都可能成为计算的瓶颈</li>
+</ol>
+<p>在简单的，平铺直叙的存储上，很难解决这两个问题</p>
+<p>不如再封装一层，于是  </p>
+<p>压缩算法就来了(这里说的是无损压缩技术，后面说的都是无损压缩)。</p>
+<h2 id="2-2-压缩算法原理"><a href="#2-2-压缩算法原理" class="headerlink" title="2.2 压缩算法原理"></a>2.2 压缩算法原理</h2><p>压缩算法的出现是为了解决空间不足和IO的问题，</p>
+<p>但是要付出一点成本，就是额外的计算资源的开销。</p>
+<p>下面举几个常见的压缩例子，来看看压缩技术是如何实现的：</p>
+<ul>
+<li><p>游程编码(Run Length Encoding)</p>
+<ul>
+<li>用一个符号值或串长代替具有相同值的连续符号</li>
+<li>一个例子:<ul>
+<li>输入串为：AAAAAAAAAAAAAAA AAAAAAAAAAAAAAA AAA</li>
+<li>压缩后为：15A 15A 3A</li>
+</ul>
+</li>
+<li>适用场景:重复数据</li>
+</ul>
+</li>
+<li><p>差分编码(Delta Encoding)</p>
+<ul>
+<li>又称增量编码，是通过储存差异来达到压缩的目标</li>
+<li>一个例子:<ul>
+<li>输入串为:10000,10001,10002,10003,10004,10005,10006,10007</li>
+<li>压缩后为:10000 0,1,2,3,4,5,6,7</li>
+</ul>
+</li>
+<li>适用场景:有序数据集，例如timestamp</li>
+</ul>
+</li>
+<li><p>字典编码(Dictionary Encoding)</p>
+<ul>
+<li>提供一个字典，如果输入串中的单词命中字典，那用字典中的位置来替换这个词</li>
+<li>一个例子:<ul>
+<li>输入串为：”hello world. hello new world.”</li>
+<li>压缩后为：[‘hello’,’world’] “0 1. 0 new 1”</li>
+</ul>
+</li>
+<li>适用场景：小规模的数据集合，例如IP地址</li>
+</ul>
+</li>
+</ul>
+<p>实际工业界中使用的算法会更加复杂，这里不逐一展开。</p>
+<h2 id="2-3-压缩算法的评价标准"><a href="#2-3-压缩算法的评价标准" class="headerlink" title="2.3 压缩算法的评价标准"></a>2.3 压缩算法的评价标准</h2><p>对于压缩算法来说，衡量它们的优劣，通常有如下的指标：</p>
+<ul>
+<li>压缩比：压缩后的文件大小占不压缩大小比例</li>
+<li>压缩速度：在相同环境下，指定时间内压缩文件的大小</li>
+<li>解压速度：大相同环境下，指定时间内解压文件的大小</li>
+</ul>
+<p>在Hadoop圈，还有另一个关键指标：可分割性</p>
+<p>Gzip是一种非常常见的压缩算法，但是它不支持可分割性，带来的后果就是：</p>
+<ul>
+<li>对一个Gzip压缩后依然非常大的文件进行load时，本来需要多个map同时工作，但是由于文件只能从头开始进行解压缩，于是只能使用一个map来进行工作。</li>
+</ul>
+<p>包括压缩界的新秀zstd，也是不支持可分割性，那么好的算法，是不是在hadoop圈不能用了？</p>
+<p>显然与事实不符，我们都知道zstd在hadoop圈应用还是比较多的，那么如何来解决这个问题呢？</p>
+<p>当你在原来的层面发现问题很难时，不防想想可不可以通过增加一层来解决这个问题。</p>
+<p>既然zstd这类的算法只能从文件开头开始进行解压缩，那么我们把一个大文件切分成一小块一小块的小文件(最好是每个文件刚刚好在压缩后对应到一个HDFS文件块)，sequencefile就是这么一种技术，这里不详细的介绍了。</p>
+<h2 id="2-4-压缩算法Benchmarks"><a href="#2-4-压缩算法Benchmarks" class="headerlink" title="2.4 压缩算法Benchmarks"></a>2.4 压缩算法Benchmarks</h2><p>Compressor name|    Ratio|    Compression    |Decompress.<br>–|          –|   –|        – |    –<br>zstd 1.3.4 -1    |2.877    |470 MB/s    |1380 MB/s<br>zlib 1.2.11 -1    |2.743    |110 MB/s    |400 MB/s<br>brotli 1.0.2 -0    |2.701    |410 MB/s    |430 MB/s<br>quicklz 1.5.0 -1|    2.238    |550 MB/s    |710 MB/s<br>lzo1x 2.09 -1    |2.108    |650 MB/s|    830 MB/s<br>lz4 1.8.1    | 2.101    |750 MB/s    |3700 MB/s<br>snappy 1.1.4    |2.091    |530 MB/s    |1800 MB/s<br>lzf 3.6 -1    |2.077    |400 MB/s|    860 MB/s</p>
+<p>For comparison, several fast compression algorithms were tested and compared on a server running Linux Debian (Linux version 4.14.0-3-amd64), with a Core i7-6700K CPU @ 4.0GHz, using lzbench, an open-source in-memory benchmark by @inikep compiled with gcc 7.3.0, on the Silesia compression corpus.</p>
+<hr>
+<p>以上这些内容算是列式存储的前奏吧，后面会介绍Parquet文件，如同上面提到的sequencefile一样，Parquet也是一种文件的组织形式</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/序列化-压缩/" rel="tag"># 序列化, 压缩</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/04/08/2018-04-06_列式存储_Parquet/" rel="next" title="Parquet原理">
+                <i class="fa fa-chevron-left"></i> Parquet原理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/06/26/Yarn源码分析5-资源调度/" rel="prev" title="Yarn源码分析5-资源调度">
+                Yarn源码分析5-资源调度 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-序列化"><span class="nav-number">1.</span> <span class="nav-text">1. 序列化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-RPC"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 RPC</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-RPC效率优化"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 RPC效率优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-3-常见的数据交换协议"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 常见的数据交换协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-4-序列化示例-pickle"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 序列化示例-pickle</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-压缩"><span class="nav-number">2.</span> <span class="nav-text">2. 压缩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-为什么需要压缩算法"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 为什么需要压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-压缩算法原理"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 压缩算法原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-压缩算法的评价标准"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 压缩算法的评价标准</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-压缩算法Benchmarks"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 压缩算法Benchmarks</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

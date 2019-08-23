@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="bigdata,distributed system,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="《Big Data: A Survey》论文阅读分享2018-08-18liyakun.hit 论文信息：Mobile Networks and Applications，April 2014, Volume 19, Issue 2, pp 171–209 概述 大数据技术所处位置：与云计算、IOT、数据中心和Hadoop的关系 大数据生命周期：产生、获得、存储、分析 典型应用场景：企业管理、IO">
+<meta name="keywords" content="bigdata,distributed system">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Big-Data-A-Survey 论文阅读分享">
+<meta property="og:url" content="http://yoursite.com/2018/09/05/2018-09-05_bigdata_survey/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="《Big Data: A Survey》论文阅读分享2018-08-18liyakun.hit 论文信息：Mobile Networks and Applications，April 2014, Volume 19, Issue 2, pp 171–209 概述 大数据技术所处位置：与云计算、IOT、数据中心和Hadoop的关系 大数据生命周期：产生、获得、存储、分析 典型应用场景：企业管理、IO">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-23T06:14:49.418Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Big-Data-A-Survey 论文阅读分享">
+<meta name="twitter:description" content="《Big Data: A Survey》论文阅读分享2018-08-18liyakun.hit 论文信息：Mobile Networks and Applications，April 2014, Volume 19, Issue 2, pp 171–209 概述 大数据技术所处位置：与云计算、IOT、数据中心和Hadoop的关系 大数据生命周期：产生、获得、存储、分析 典型应用场景：企业管理、IO">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/09/05/2018-09-05_bigdata_survey/">
+
+
+
+
+
+  <title>Big-Data-A-Survey 论文阅读分享 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/09/05/2018-09-05_bigdata_survey/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Big-Data-A-Survey 论文阅读分享</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-09-05T21:05:16+08:00">
+                2018-09-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/bigdata/" itemprop="url" rel="index">
+                    <span itemprop="name">bigdata</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>《Big Data: A Survey》论文阅读分享<br>2018-08-18<br>liyakun.hit</p>
+<p>论文信息：Mobile Networks and Applications，April 2014, Volume 19, Issue 2, pp 171–209</p>
+<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><ul>
+<li>大数据技术所处位置：与云计算、IOT、数据中心和Hadoop的关系</li>
+<li>大数据生命周期：产生、获得、存储、分析</li>
+<li>典型应用场景：企业管理、IOT、社交网络、医疗、集体智慧、智能电网</li>
+</ul>
+<h1 id="相关技术"><a href="#相关技术" class="headerlink" title="相关技术"></a>相关技术</h1><h2 id="大数据与云计算"><a href="#大数据与云计算" class="headerlink" title="大数据与云计算"></a>大数据与云计算</h2><ul>
+<li>云计算改革了IT基础架构，大数据则影响了商业决策，云计算是大数据能平滑扩展的保证</li>
+<li>云计算的目标用户是CIO(首席信息官)，大数据的目标用户是CEO</li>
+</ul>
+<h2 id="大数据与IOT"><a href="#大数据与IOT" class="headerlink" title="大数据与IOT"></a>大数据与IOT</h2><p>IOT(物联网)丰富的终端产生了大量的半结构、非结构化数据，这些数据只有被拿来分析才有价值</p>
+<ul>
+<li>IOT为大数据带来了很好的应用场景</li>
+<li>大数据技术在IOT中的应用也加速了IOT的研究进展和商业模式。</li>
+</ul>
+<h2 id="大数据与数据中心"><a href="#大数据与数据中心" class="headerlink" title="大数据与数据中心"></a>大数据与数据中心</h2><ul>
+<li>大数据需要数据中心提供强有力的支持：容量、带宽、散热等</li>
+<li>大数据加速了数据中心的革命和创新，一些独特的大数据架构，促进了数据中心的存储，网络技术开发。</li>
+<li>大数据希望数据中心提供更多的软实力支持，如数据获取、加工、分析与应用</li>
+</ul>
+<h2 id="大数据与Hadoop"><a href="#大数据与Hadoop" class="headerlink" title="大数据与Hadoop"></a>大数据与Hadoop</h2><p>Hadoop是工业界应用最广泛的大数据应用</p>
+<h1 id="大数据生命周期"><a href="#大数据生命周期" class="headerlink" title="大数据生命周期"></a>大数据生命周期</h1><h2 id="数据产生"><a href="#数据产生" class="headerlink" title="数据产生"></a>数据产生</h2><ul>
+<li>企业数据</li>
+<li>IOT数据</li>
+<li>生物医学数据</li>
+<li>其它学科中产生的数据：天文学等等</li>
+</ul>
+<h2 id="数据获取"><a href="#数据获取" class="headerlink" title="数据获取"></a>数据获取</h2><h3 id="数据采集"><a href="#数据采集" class="headerlink" title="数据采集"></a>数据采集</h3><ul>
+<li>日志文件</li>
+<li>传感器数据</li>
+<li>获取网络数据：<ul>
+<li>基于Libpcap的数据包捕获技术：被广泛使用的函数库</li>
+<li>Zero-copy数据包捕获技术：全程绕过内核与CPU<ul>
+<li>发送时：数据从用户进程，直接通过网卡进入网络</li>
+<li>接收时：网卡直接把数据送给用户进程</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>移动设备收集：IOS，Android</li>
+</ul>
+<h3 id="数据传输"><a href="#数据传输" class="headerlink" title="数据传输"></a>数据传输</h3><ul>
+<li>跨数据中心传输：主要是数据进入数据中心的过程。<ul>
+<li>(注：对通信这块不太了解，这里只列出概念，大家可以自行搜索相关资料)</li>
+<li>WDM：在光纤上进行信道复用的技术，光的频分复用</li>
+<li>OFDM ：多载波传输方案的实现方式之一，采用N个重叠的子频带，子频带间正交，在接收端无需分离频谱就可将信号接收。</li>
+</ul>
+</li>
+<li>数据中心内传输：<ul>
+<li>网络拓扑结构</li>
+<li>目标：高吞吐、低延迟，低能耗</li>
+<li>挑战：网络可视化</li>
+</ul>
+</li>
+</ul>
+<h3 id="数据预处理"><a href="#数据预处理" class="headerlink" title="数据预处理"></a>数据预处理</h3><ul>
+<li>数据集成：数据整合，并为用户提供统一视图</li>
+<li>清洗：发现不正确、不完整、不合理的数据，通过修改或删除，提升数据质量</li>
+<li>冗余消除</li>
+</ul>
+<h2 id="数据存储"><a href="#数据存储" class="headerlink" title="数据存储"></a>数据存储</h2><h3 id="传统外挂存储系统"><a href="#传统外挂存储系统" class="headerlink" title="传统外挂存储系统"></a>传统外挂存储系统</h3><ul>
+<li>DAS: Direct Attached Storage，将存储设备通过SCSI接口或光纤通道直接连接到一台计算机上</li>
+<li>NAS: Network Attached Storage，存储设备通过标准的网络拓扑结构，连接到一群计算机上</li>
+<li>SAN: Storage Area Network，通过光纤通道连接到一群计算机上，建立专用于数据存储的区域网络</li>
+</ul>
+<h3 id="分布式存储理论基础"><a href="#分布式存储理论基础" class="headerlink" title="分布式存储理论基础"></a>分布式存储理论基础</h3><ul>
+<li>CAP理论：一个分布式系统最多只能同时满足CAP三个特性中的两项。(Eric Brewer, 2000)<ul>
+<li>Consistency：一致性，即数据写入后，所有节点在同一时间的数据完全一致</li>
+<li>Availability：可用性，服务一直可用，而且是正常响应时间</li>
+<li>Partition Tolerance：区容错性，某节点或网络分区故障的时候，仍然能够对外提供满足一致性和可用性的服务</li>
+</ul>
+</li>
+<li>CA系统：不是分布式服务，比如传统的关系型数据库。或者完全不能容忍一台主机down掉的服务</li>
+<li>CP系统：保证一致性，但不保证任意时间可用，如BigTable，Hbase</li>
+<li>AP系统：保证可用性，同时保证最终一致性，如Dynamo，Cassandra</li>
+<li>(注：绝对的A是不存在的，P是分布式的基础，所以这个理论其实是有问题的)</li>
+</ul>
+<h3 id="大数据存储机制"><a href="#大数据存储机制" class="headerlink" title="大数据存储机制"></a>大数据存储机制</h3><ul>
+<li>文件系统：<ul>
+<li>技术已经比较成熟，不做为重点介绍，目前工业界的系统有：GFS，HDFS，Kosmosfs，Cosmos(by微软)，Haystack(by FB)，TFS(by Taobao)，FastDFS(by ali)</li>
+</ul>
+</li>
+<li>数据库<ul>
+<li>行式kv数据库：<ul>
+<li>Dynamo：by亚马逊，只有论文，未开源。分区依赖一致性哈希，高可用性，保证最终一致性</li>
+<li>Voldemort：by LinkedIn，开源，号称是Dynamo的开源实现。</li>
+</ul>
+</li>
+<li>列式kv数据库：<ul>
+<li>BigTable：by Google，分布式结构化数据存储系统，原理，排序大表 + Column Family列式存储 + lsm(Log-Structured Merge)树，尤其适合写多读少的场景</li>
+<li>Cassandra：by FB，开源，分区模仿Dynamo依赖一致性哈希，数据模型模仿BigTable使用列式存储</li>
+<li>HBase：Hadoop生态圈中的一员，BigTable的Java开源实现。</li>
+<li>Hypertable：by Zvents，开源，BigTable的C++开源实现。</li>
+</ul>
+</li>
+<li>文档型kv数据库：<ul>
+<li>MongoDB：by MongoDB，开源，c++，存储Value是Binary JSON对象。可以配置为CP(默认)，或AP</li>
+<li>SimpleDB：by亚马逊，不开源，不支持自动的partition，最终一致</li>
+<li>Couchbase：by Apache，Erlang，存储value是JSON对象，最终一致</li>
+</ul>
+</li>
+<li>关系型数据库(支持跨行事务)：<ul>
+<li>Spanner/f1：by Google，不开源，share nothing，兼容SQL语法，跨行事务，CP系统</li>
+<li>Aurora：by亚马逊，不开源，共享存储，兼容mysql语法，跨行事务，CP系统</li>
+<li>TiDB：by PingCAP，号称是Spanner的开源实现，但是事务模型不同，share nothing，兼容mysql语法，跨行事务，CP系统。</li>
+<li>CockroachDB：号称是Spanner的开源实现</li>
+<li>(注：论文中把数据库分成了三类：行式、列式、文档型，结合最新的成果，我在这里又添加了关系型数据库。个人认为Google，亚马逊是这个领域的先驱，在kv时代两者分别提出不同的解决方案，在关系型时代，又分别提出了不同的解决方案。)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>编程模型<ul>
+<li>MapReduce:<ul>
+<li>这个模型只提供两个函数给用户编程，分别是map和reduce，由框架来负责将原始数据切分并分别进行map运算，然后再将map的结果重新组织(shuffle)到各个reduce函数，最终由reduce产生输出结果。</li>
+<li>由于map和reduce是两个非常基础的方法，复杂的程序设计中，需要花费大量的时间来设计如何调用这两个方法，因此，在mr的基础上，出现了一些高级一点的封装：<ul>
+<li>Sawzall by Google, Pig Latin by Yahoo，Hive by Facebook，Scope by 微软</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Dryad：<ul>
+<li>by微软，通过DAG把多个MR串联起来，学院派产物。可以重点关注一下Spark。</li>
+</ul>
+</li>
+<li>Spark:<ul>
+<li>by MIT，工业级的Dryad，目前最活跃的大数据的计算模型。</li>
+<li>基于DAG把MR串起来，在需要shuffle的地方划分为两个不同的stage，在stage内是并行计算的，在stage间是串行的。</li>
+<li>在自己的内核外层同时封装了SQL、Streaming(流式计算)、MLlib(机器学习)、GraphX(图数据)等类库，生态完整。</li>
+</ul>
+</li>
+<li>All-Pairs：<ul>
+<li>主要应用在生物特征、生物信息学和数据挖掘应用。给定SetA SetB FuncA，All-Pairs能给出两个集群中的任意点求FuncA的结果矩阵。</li>
+<li>共分为两步，第一步使用一个近似模型来对数据分区，第二步把数据流动到指定节点后，分批次的在各个节点上进行运算。</li>
+</ul>
+</li>
+<li>Pregel：<ul>
+<li>by Google，图计算模型，不开源。</li>
+<li>先把图构建好了，然后把计算划分为超步(类似stage)，单个超步内是并发计算的，超步之间是串行的。每个节点在一个超步结束时，可能会改变自己的状态、或自己的边的状态。</li>
+</ul>
+</li>
+<li>Dremel:<ul>
+<li>by Google，不开源。</li>
+<li>解决大规模交互数据分析的实时性问题，适合数据读取数据量大，但是返回数据量小的场景，宣称可以在3秒钟的时间处理1PB数据。</li>
+<li>列式存储+自定义的SQL语法</li>
+</ul>
+</li>
+<li>(注：论文中并没有提到Spark,Dremel，因为Spark算是当红炸子鸡，所以必须要讲一下。Dremel是Google的分布进化中很重要的一步，在这里介绍一下Google的分布式计算进化历程：<ul>
+<li>从MapReduce(对应开源MapReduce)开始，提供了一种从分布式文件系统中读取并处理的解决方案。</li>
+<li>接着提出了BigTable(对应开源Hbase)，在分布式文件系统上面简单的包装了一个KV数据库。</li>
+<li>接着又提出了Dremel(对应开源的Impala/drill)，依靠自定义的存储结构和定制的SQL，在返回数据量小的场景在比MR快几个数量级)，但是其实可以把它看做一个高度定制优化的MR。</li>
+<li>然后又提出了Spanner/f1(对应开源的TiDB)，主要背景是分布式理论实践(尤其是paxos\raft)储备就绪，向难度更高的跨行事务发起了挑战。</li>
+<li>可以说，整个分布式计算的进程基本是由Google来提出问题，并指引方向（当然，亚马逊在后面也提出一些独特解决问题的方法)。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="数据分析"><a href="#数据分析" class="headerlink" title="数据分析"></a>数据分析</h2><h3 id="传统分析"><a href="#传统分析" class="headerlink" title="传统分析"></a>传统分析</h3><ul>
+<li>聚类</li>
+<li>因子分析：指研究从变量群中提取共性因子的统计技术</li>
+<li>相关性分析</li>
+<li>回归分析：是一种揭示一个变量和几个其他变量之间相关性的数学工具。</li>
+<li>A/B测试</li>
+<li>统计分析：提供大数据的描述和推断，广泛应用于经济领域</li>
+<li>各种各样的数据挖掘算法</li>
+</ul>
+<h3 id="大数据分析"><a href="#大数据分析" class="headerlink" title="大数据分析"></a>大数据分析</h3><ul>
+<li>大数据时代的工具知识点<ul>
+<li>Bloom Filter</li>
+<li>哈希</li>
+<li>索引</li>
+<li>字典树(Triel)</li>
+<li>并行计算(比如，MPI, MR, Spark, Flink)</li>
+</ul>
+</li>
+<li>常见数据挖掘分析工具<ul>
+<li>R语言</li>
+<li>Excel</li>
+<li>Rapid-I Rapidminer</li>
+<li>KNMINE</li>
+<li>Weka/Pentaho</li>
+<li>tableau</li>
+<li>qlikview</li>
+</ul>
+</li>
+<li>实时和离线分析<ul>
+<li>实时计算：主要应用在电子商务和财经系统中，常见的解决方案有：<ul>
+<li>使用并行的传统关系型数据库组成，Greenplum by EMC，已经开源</li>
+<li>使用纯内存的计算平台，HANA by SAP，商业软件，很贵</li>
+<li>(注：论文里面介绍到此处，是想描述一些类似于传统事务型的数据的大数据支持场景，如果是这种场景，其实还应该包含，Spanner/f1，Aurora，TiDB)</li>
+<li>(注：其实大数据圈子里面，还有另一个实时计算(流式计算)的概念，跟上面的概念不同，主要是解决大量数据的流动，以及流动过程中的计算问题，典型的流式计算组件有：storm，flink，都是开源的，其中Flink被认为是取代storm的产品，目前阿里在这个产品上投入了非常多的人力)</li>
+</ul>
+</li>
+<li>离线计算：主要应用在机器学习、统计、推荐系统中，常见的解决方案有：<ul>
+<li>Hadoop，这个已经很成熟了不多介绍。</li>
+<li>Scribe，by FaceBook，开源的日志收集系统</li>
+<li>Kafka，by LinkedIn，开源消息中间件</li>
+<li>Timetunnel，by Taobao，开源，基于thrift通讯框架搭建的实时数据传输平台</li>
+<li>Chukwa，by Apache，开源日志收集处理平台，hadoop生态</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="大数据典型应用"><a href="#大数据典型应用" class="headerlink" title="大数据典型应用"></a>大数据典型应用</h1><ul>
+<li>方向<ul>
+<li>驱动应用程序的进化：商业应用、网络应用、科研应用</li>
+<li>结构化数据分析</li>
+<li>文本数据分析</li>
+<li>互联网数据分析</li>
+<li>多媒体分析</li>
+<li>图数据分析</li>
+<li>移动数据分析</li>
+</ul>
+</li>
+<li>典型场景<ul>
+<li>企业级数据分析</li>
+<li>IOT应用</li>
+<li>社交网络</li>
+<li>医疗健康应用</li>
+<li>集体智慧：众包, 如Amazon Turk</li>
+<li>智能电网</li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/bigdata/" rel="tag"># bigdata</a>
+          
+            <a href="/tags/distributed-system/" rel="tag"># distributed system</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/17/Yarn源码分析6-Reserve机制/" rel="next" title="Yarn源码分析6-Reserve机制">
+                <i class="fa fa-chevron-left"></i> Yarn源码分析6-Reserve机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/08/11/Key-Customizations-of-YARN-ByteDance/" rel="prev" title="Hadoop Meetup分享--YARN关键定制@ByteDance">
+                Hadoop Meetup分享--YARN关键定制@ByteDance <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#相关技术"><span class="nav-number">2.</span> <span class="nav-text">相关技术</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#大数据与云计算"><span class="nav-number">2.1.</span> <span class="nav-text">大数据与云计算</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#大数据与IOT"><span class="nav-number">2.2.</span> <span class="nav-text">大数据与IOT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#大数据与数据中心"><span class="nav-number">2.3.</span> <span class="nav-text">大数据与数据中心</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#大数据与Hadoop"><span class="nav-number">2.4.</span> <span class="nav-text">大数据与Hadoop</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#大数据生命周期"><span class="nav-number">3.</span> <span class="nav-text">大数据生命周期</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#数据产生"><span class="nav-number">3.1.</span> <span class="nav-text">数据产生</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据获取"><span class="nav-number">3.2.</span> <span class="nav-text">数据获取</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#数据采集"><span class="nav-number">3.2.1.</span> <span class="nav-text">数据采集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据传输"><span class="nav-number">3.2.2.</span> <span class="nav-text">数据传输</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据预处理"><span class="nav-number">3.2.3.</span> <span class="nav-text">数据预处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据存储"><span class="nav-number">3.3.</span> <span class="nav-text">数据存储</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#传统外挂存储系统"><span class="nav-number">3.3.1.</span> <span class="nav-text">传统外挂存储系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分布式存储理论基础"><span class="nav-number">3.3.2.</span> <span class="nav-text">分布式存储理论基础</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#大数据存储机制"><span class="nav-number">3.3.3.</span> <span class="nav-text">大数据存储机制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据分析"><span class="nav-number">3.4.</span> <span class="nav-text">数据分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#传统分析"><span class="nav-number">3.4.1.</span> <span class="nav-text">传统分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#大数据分析"><span class="nav-number">3.4.2.</span> <span class="nav-text">大数据分析</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#大数据典型应用"><span class="nav-number">4.</span> <span class="nav-text">大数据典型应用</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

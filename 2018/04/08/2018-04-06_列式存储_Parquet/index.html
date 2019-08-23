@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="partquet,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Parquet原理 Hadoop生态学习小组2018-04-08 在互联网大数据应用场景下，通常数据量很大且字段很多， 但每次查询数据只针对其中的少数几个字段，这时候列式存储是极佳的选择。 列式存储要解决的问题：  把IO只给查询需要用到的数据 只加载需要被计算的列   空间节省 列式的压缩效果更好 可以针对数据类型进行编码   开启矢量化的执行引擎(不再1条1条的处理数据，而是一次处理1024条">
+<meta name="keywords" content="partquet">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Parquet原理">
+<meta property="og:url" content="http://yoursite.com/2018/04/08/2018-04-06_列式存储_Parquet/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="Parquet原理 Hadoop生态学习小组2018-04-08 在互联网大数据应用场景下，通常数据量很大且字段很多， 但每次查询数据只针对其中的少数几个字段，这时候列式存储是极佳的选择。 列式存储要解决的问题：  把IO只给查询需要用到的数据 只加载需要被计算的列   空间节省 列式的压缩效果更好 可以针对数据类型进行编码   开启矢量化的执行引擎(不再1条1条的处理数据，而是一次处理1024条">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://yoursite.com/images/parquet_example.png">
+<meta property="og:image" content="http://yoursite.com/images/parquet_file_format.png">
+<meta property="og:image" content="http://yoursite.com/images/parquet_size_compare.png">
+<meta property="og:image" content="http://yoursite.com/images/parquet_query_time_compare.png">
+<meta property="og:updated_time" content="2019-08-23T06:01:19.874Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Parquet原理">
+<meta name="twitter:description" content="Parquet原理 Hadoop生态学习小组2018-04-08 在互联网大数据应用场景下，通常数据量很大且字段很多， 但每次查询数据只针对其中的少数几个字段，这时候列式存储是极佳的选择。 列式存储要解决的问题：  把IO只给查询需要用到的数据 只加载需要被计算的列   空间节省 列式的压缩效果更好 可以针对数据类型进行编码   开启矢量化的执行引擎(不再1条1条的处理数据，而是一次处理1024条">
+<meta name="twitter:image" content="http://yoursite.com/images/parquet_example.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/04/08/2018-04-06_列式存储_Parquet/">
+
+
+
+
+
+  <title>Parquet原理 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/08/2018-04-06_列式存储_Parquet/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Parquet原理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2018-04-08T10:35:23+08:00">
+                2018-04-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/存储/" itemprop="url" rel="index">
+                    <span itemprop="name">存储</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Parquet原理</p>
+<p>Hadoop生态学习小组<br>2018-04-08</p>
+<p>在互联网大数据应用场景下，通常数据量很大且字段很多，</p>
+<p>但每次查询数据只针对其中的少数几个字段，这时候列式存储是极佳的选择。</p>
+<p>列式存储要解决的问题：</p>
+<ul>
+<li>把IO只给查询需要用到的数据<ul>
+<li>只加载需要被计算的列</li>
+</ul>
+</li>
+<li>空间节省<ul>
+<li>列式的压缩效果更好</li>
+<li>可以针对数据类型进行编码</li>
+</ul>
+</li>
+<li>开启矢量化的执行引擎(不再1条1条的处理数据，而是一次处理1024条数据)</li>
+</ul>
+<p>Parquet和ORC是两种列式存储格式</p>
+<p>今天主要介绍Parquet，后面会再介绍一下ORC，及对比</p>
+<p>Parquet源码 : <a href="https://github.com/apache/parquet-mr" target="_blank" rel="noopener">https://github.com/apache/parquet-mr</a></p>
+<p>Parquet的设计目标：</p>
+<ul>
+<li>适配通用性</li>
+<li>存储空间优化</li>
+<li>计算时间优化</li>
+</ul>
+<h1 id="1-适配通用性"><a href="#1-适配通用性" class="headerlink" title="1. 适配通用性"></a>1. 适配通用性</h1><p>Parquet只是一种存储格式，它与上层平台、语言无关，不需要与任何一种数据处理框架绑定，目前已经适配的组件包括：</p>
+<ul>
+<li>查询引擎：Hive\Impala\Pig\Presto\Drill\Tajo\HAWQ\IBM Big SQL</li>
+<li>计算引擎：MapReduce\Spark\Cascading\Crunch\Scalding\Kite</li>
+<li>数据模型：Avro\Thrift\Protocol Buffers</li>
+</ul>
+<h1 id="2-存储空间优化"><a href="#2-存储空间优化" class="headerlink" title="2. 存储空间优化"></a>2. 存储空间优化</h1><h2 id="2-1-什么叫列式存储"><a href="#2-1-什么叫列式存储" class="headerlink" title="2.1 什么叫列式存储?"></a>2.1 什么叫列式存储?</h2><p>传统的思维中是按照一条记录一条记录的组织存储，列式存储是竖过来，按照一列一列的方式组织存储。</p>
+<h2 id="2-2-Parquet的数据模型"><a href="#2-2-Parquet的数据模型" class="headerlink" title="2.2 Parquet的数据模型"></a>2.2 Parquet的数据模型</h2><p>每条记录中的字段可以包含三种类型：required, repeated, optional。最终由所有叶子节点来代表整个schema。</p>
+<h2 id="2-2-Parquet的数据模型-1"><a href="#2-2-Parquet的数据模型-1" class="headerlink" title="2.2 Parquet的数据模型"></a>2.2 Parquet的数据模型</h2><ul>
+<li>元组的Schema可以转换成树状结构，根节点可以理解为repeated类型</li>
+<li>所有叶子结点都是基本类型</li>
+<li>没有Map、Array这样的复杂数据结构，但是可以通过repeated和group组合来实现这样的需求</li>
+</ul>
+<h2 id="2-3-Striping-Assembly算法"><a href="#2-3-Striping-Assembly算法" class="headerlink" title="2.3 Striping/Assembly算法"></a>2.3 Striping/Assembly算法</h2><p>Parquet的一条记录的数据如何分成多少列，又如何组装回来？是由Striping/Assembly算法决定的。</p>
+<p>在该算法中，列的每一个值都包含三个部分：</p>
+<ul>
+<li>value : 字段值</li>
+<li>repetition level : 重复级别</li>
+<li>definition level : 定义级别</li>
+</ul>
+<h3 id="2-3-1-Repetition-Levels"><a href="#2-3-1-Repetition-Levels" class="headerlink" title="2.3.1 Repetition Levels"></a>2.3.1 Repetition Levels</h3><p>repetition level的设计目标是为了支持repeated类型的节点：</p>
+<ul>
+<li>在写入时该值等于它和前面的值从哪一层节点开始是不共享的。</li>
+<li>在读取的时候根据该值可以推导出哪一层上需要创建一个新的节点。<br>例子：对于这样的schema和两条记录：</li>
+</ul>
+<p>message nested {<br>     repeated group leve1 {<br>          repeated string leve2;<br>     }<br>}</p>
+<p>r1:[[a,b,c,] , [d,e,f,g]]<br>r2:[[h] , [i,j]]</p>
+<p>计算一下各个值的repetition level。<br>repetition level计算过程：</p>
+<ul>
+<li>value=a是一条记录的开始，和前面的值在根结点上是不共享的，因此repetition level=0</li>
+<li>value=b和前面的值共享了level1这个节点，但是在level2这个节点上不共享，因此repetition level=2</li>
+<li>同理，value=c的repetition value=2</li>
+<li>value=d和前面的值共享了根节点，在level1这个节点是不共享的，因此repetition level=1</li>
+<li>同理，value=e,f,g都和自己前面的占共享了level1，没有共享level2，因此repetition level=2</li>
+<li>value=h属于另一条记录，和前面不共享任何节点，因此，repetition level=0</li>
+<li>value=i跟前面的结点共享了根，但是没有共享level1节点，因此repetition level=1</li>
+<li>value-j跟前面的节点共享了level1，但是没有共享level2，因此repetition level=2</li>
+</ul>
+<p>在读取时，会顺序读取每个值，然后根据它的repetition level创建对象</p>
+<ul>
+<li>当读取value=a时，repeatition level=0，表示需要创建一个新的根节点，</li>
+<li>当读取value=b时，repeatition level=2，表示需要创建level2节点</li>
+<li>当读取value=c时，repeatition level=2，表示需要创建level2节点</li>
+<li>当读取value=d时，repeatition level=1，表示需要创建level1节点</li>
+<li>剩下的节点依此类推</li>
+</ul>
+<p>几点规律：</p>
+<ul>
+<li>repetition level=0表示一条记录的开始</li>
+<li>repetition level的值只是针对路径上repeated类型的节点，因此在计算时可以忽略非repeated类型的节点</li>
+<li>在写入的时候将其理解为该节点和路径上的哪一个repeated节点是不共享的</li>
+<li>读取的时候将其理解为需要在哪一层创建一个新的repeated节点</li>
+</ul>
+<h3 id="2-3-2-Definition-Levels"><a href="#2-3-2-Definition-Levels" class="headerlink" title="2.3.2 Definition Levels"></a>2.3.2 Definition Levels</h3><p>有了repetition levle就可以构造出一条记录了，那么为什么还需要definition level呢？</p>
+<p>是因为repeated和optional类型的存在，可以一条记录中的某些列是没有值的，如果不记录这样的值，就会导致本该属于下一条记录的值被当做当前记录中的一部分，从而导致数据错误，因此，对于这种情况，需要一个占位符来表示。</p>
+<p>definition level的值仅对空值是有效的，<strong>表示该值的路径上第几层开始是未定义的</strong>；对于非空值它是没有意义的，因为非空值在叶子节点上是有定义的，所有的父节点也一定是有定义的，因此它的值总是等于该列最大的definition level。<br>例子：对于这样的schema：</p>
+<p>message ExampleDefinitionLevel {<br>  optional group a {<br>    optional group b {<br>      optional string c;<br>    }<br>  }<br>}</p>
+<p>它包含一个列a.b.c，这个列的的每一个节点都是optional类型的，当c被定义时a和b肯定都是已定义的，当c未定义时我们就需要标示出在从哪一层开始时未定义的<br>一条记录的definition level的几种可能的情况如下表：</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Definition Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a:null</td>
+<td>0</td>
+</tr>
+<tr>
+<td>a:{b:null}</td>
+<td>1</td>
+</tr>
+<tr>
+<td>a:{b:{c:null}}</td>
+<td>2</td>
+</tr>
+<tr>
+<td>a:{b:{c:”foo”}}</td>
+<td>3(全部定义了)</td>
+</tr>
+</tbody></table>
+<p>由于definition level只需要考虑未定义的值，对于required类型的节点，只要父亲节点定义了，该节点就必须定义，因此计算时可以忽略路径上的required类型的节点，这样可以减少definition level的最大值，优化存储。</p>
+<h3 id="2-3-3-一个完整的例子"><a href="#2-3-3-一个完整的例子" class="headerlink" title="2.3.3 一个完整的例子"></a>2.3.3 一个完整的例子</h3><p>下面使用Dremel论文中给的Document示例和给定的两个值展示计算repeated level和definition level的过程，这里把未定义的值记录为NULL，使用R表示repeated level，D表示definition level。</p>
+<p><img src="/images/parquet_example.png" alt></p>
+<ul>
+<li><p>首先看DocId这一列，r1和r2都只有一值分别是：</p>
+<ul>
+<li>id1=10,由于它是记录开始，并且是已定义的，因此R=0,D=0</li>
+<li>id2=20,由于是新记录的开始，并且是已经定义的，因此R=0,D=0</li>
+</ul>
+</li>
+<li><p>对于Name.Url这一列，r1中它有三个值，r2中有一个值分别是：</p>
+<ul>
+<li>url1=’<a href="http://A&#39;" target="_blank" rel="noopener">http://A&#39;</a> ，它是r1中该列的第一个值，并且是定义的，所以R=0,D=2</li>
+<li>url2=’<a href="http://B&#39;" target="_blank" rel="noopener">http://B&#39;</a> ，它跟上一个值在Name这层是不同的，并且是定义的，所以R=1,D=2</li>
+<li>url3=NULL，它跟上一个值在Name这层是不同的，并且是未定义的，所以R=1,D=1</li>
+<li>url4=’<a href="http://C&#39;" target="_blank" rel="noopener">http://C&#39;</a> ，它跟上一个值属于不同记录，并且是定义的，所以R=0,D=2</li>
+</ul>
+</li>
+<li><p>对于Links.Forward这一列，在r1中有三个值，在r2中有1个值，分别是：</p>
+<ul>
+<li>value1=20，它是r1中该列的第一个值，并且是定义的，所以R=0,D=2</li>
+<li>value2=40，它跟上一个值在Links这层是相同的，并且是定义的，所以R=1,D=2</li>
+<li>value3=60，它跟上一个值在Links这层是相同的，并且是定义的，所以R=1,D=2</li>
+<li>value4=80，它是一条新的记录，并且是定义的，所以R=0,D=2</li>
+</ul>
+</li>
+<li><p>对于Links.Backward这一列，在r1中有一个空值，在r2中两个值，分别是：</p>
+<ul>
+<li>value1=NULL，它是一条新记录，并且是未定义的，父节点Links是定义的，所以R=0,D=1</li>
+<li>value2=10，是一条新记录，并且是定义的，所以R=0,D=2</li>
+<li>value3=30,跟上个值共享父节点，并且是定义的，所以R=1,D=2</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-4-Parquet文件格式"><a href="#2-4-Parquet文件格式" class="headerlink" title="2.4 Parquet文件格式"></a>2.4 Parquet文件格式</h2><p>Parquet文件是二进制方式存储的，文件中包含数据和元数据，可以直接进行解析。</p>
+<p>先了解一下关于Parquet文件的几个基本概念：</p>
+<ul>
+<li>行组(Row Group)：每一个行组包含一定的行数，一般对应一个HDFS文件块，Parquet读写的时候会将整个行组缓存在内存中。</li>
+<li>列块(Column Chunk)：在一个行组中每一列保存在一个列块中，一个列块中的值都是相同类型的，不同的列块可能使用不同的算法进行压缩。</li>
+<li>页(Page)：每一个列块划分为多个页，一个页是最小的编码的单位，在同一个列块的不同页可能使用不同的编码方式。</li>
+</ul>
+<p><img src="/images/parquet_file_format.png" alt></p>
+<p>Parquet文件组成：</p>
+<ul>
+<li><p>文件开始和结束的4个字节都是Magic Code，用于校验它是否是一个Parquet文件</p>
+</li>
+<li><p>结束MagicCode前的Footer length是文件元数据的大小，通过该值和文件长度可以计算出元数据Footer的偏移量</p>
+</li>
+<li><p>再往前推是Footer文件的元数据，里面包含：</p>
+<ul>
+<li>文件级别的信息：版本，Schema，Extra key/value对等</li>
+<li>每个行组的元信息，每个行组是由多个列块组成的：<ul>
+<li>每个列块的元信息：类型，路径，编码方式，第1个数据页的位置，第1个索引页的位置，压缩的、未压缩的尺寸，额外的KV</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>文件中大部分内容是各个行组信息：</p>
+<ul>
+<li>一个行组由多个列块组成<ul>
+<li>一个列块由多个页组成，在Parquet中有三种页：<ul>
+<li>数据页<ul>
+<li>一个页由页头、repetition levels\definition levles\valus组成</li>
+</ul>
+</li>
+<li>字典页<ul>
+<li>存储该列值的编码字典，每一个列块中最多包含一个字典页</li>
+</ul>
+</li>
+<li>索引页<ul>
+<li>用来存储当前行组下该列的索引，目前Parquet中还不支持索引页，但是在后面的版本中增加</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="3-计算时间优化"><a href="#3-计算时间优化" class="headerlink" title="3. 计算时间优化"></a>3. 计算时间优化</h1><p>Parquet的最大价值在于，它提供了一中把IO奉献给查询需要用到的数据。主要的优化有两种：</p>
+<ul>
+<li>映射下推(Project PushDown)</li>
+<li>谓词下推(Predicate PushDown)</li>
+</ul>
+<h2 id="3-1-映射下推"><a href="#3-1-映射下推" class="headerlink" title="3.1 映射下推"></a>3.1 映射下推</h2><p>列式存储的最大优势是映射下推，它意味着在获取表中原始数据时只需要扫描查询中需要的列。</p>
+<p>Parquet中原生就支持映射下推，执行查询的时候可以通过Configuration传递需要读取的列的信息，在扫描一个行组时，只扫描对应的列。</p>
+<p>除此之外，Parquet在读取数据时，会考虑列的存储是否是连接的，对于连续的列，一次读操作就可以把多个列的数据读到内存。</p>
+<h2 id="3-2-谓词下推"><a href="#3-2-谓词下推" class="headerlink" title="3.2 谓词下推"></a>3.2 谓词下推</h2><p>在RDB中谓词下推是一项非常通用的技术，通过将一些过滤条件尽可能的在最底层执行可以减少每一层交互的数据量，从而提升性能。</p>
+<p>例如，<br>select count(1)<br>from A Join B<br>on A.id = B.id<br>where A.a &gt; 10 and B.b &lt; 100  </p>
+<p>SQL查询中，如果把过滤条件A.a &gt; 10和B.b &lt; 100分别移到TableScan的时候执行，可以大大降低Join操作的输入数据。</p>
+<p>无论是行式存储还是列式存储，都可以做到上面提到的将一些过滤条件尽可能的在最底层执行。</p>
+<p>但是Parquet做了更进一步的优化，它对于每个行组中的列都在存储时进行了统计信息的记录，包括最小值，最大值，空值个数。通过这些统计值和该列的过滤条件可以直接判断此行组是否需要扫描。</p>
+<p>另外，未来还会增加Bloom Filter和Index等优化数据，更加有效的完成谓词下推。</p>
+<p>在使用Parquet的时候可以通过如下两种策略提升查询性能：</p>
+<ol>
+<li>类似于关系数据库的主键，对需要频繁过滤的列设置为有序的，这样在导入数据的时候会根据该列的顺序存储数据，这样可以最大化的利用最大值、最小值实现谓词下推。</li>
+<li>减小行组大小和页大小，这样增加跳过整个行组的可能性，但是此时需要权衡由于压缩和编码效率下降带来的I/O负载。</li>
+</ol>
+<h1 id="4-性能表现"><a href="#4-性能表现" class="headerlink" title="4. 性能表现"></a>4. 性能表现</h1><p><img src="/images/parquet_size_compare.png" alt></p>
+<p><img src="/images/parquet_query_time_compare.png" alt></p>
+<p>这里其实还有一个重要的竞争对手没有提到，就是ORC，后面会再单独介绍。</p>
+<h1 id="5-Parquet上手探索"><a href="#5-Parquet上手探索" class="headerlink" title="5. Parquet上手探索"></a>5. Parquet上手探索</h1><p>使用parquet-tools可以对一个parquet文件进行解析。</p>
+<p>parquet-tools下载地址:<a href="https://github.com/apache/parquet-mr/tree/master/parquet-tools" target="_blank" rel="noopener">https://github.com/apache/parquet-mr/tree/master/parquet-tools</a><br>yakundeMacBook-Pro:workspace yakun$ java -jar parquet-mr/parquet-tools/target/parquet-tools-1.9.1-SNAPSHOT.jar –help<br>usage: parquet-tools cat [option…] <input><br>where option is one of:<br>       –debug     Enable debug output<br>    -h,–help      Show this help string<br>    -j,–json      Show records in JSON format.<br>       –no-color  Disable color output even if supported<br>where <input> is the parquet file to print to stdout</p>
+<p>usage: parquet-tools head [option…] <input><br>where option is one of:<br>       –debug          Enable debug output<br>    -h,–help           Show this help string<br>    -n,–records <arg>  The number of records to show (default: 5)<br>       –no-color       Disable color output even if supported<br>where <input> is the parquet file to print to stdout</arg></p>
+<p>usage: parquet-tools meta [option…] <input><br>where option is one of:<br>       –debug     Enable debug output<br>    -h,–help      Show this help string<br>       –no-color  Disable color output even if supported<br>where <input> is the parquet file to print to stdout</p>
+<p>usage: parquet-tools dump [option…] <input><br>where option is one of:<br>    -c,–column <arg>  Dump only the given column, can be specified more than<br>                       once<br>    -d,–disable-data  Do not dump column data<br>       –debug         Enable debug output<br>    -h,–help          Show this help string<br>    -m,–disable-meta  Do not dump row group and page metadata<br>    -n,–disable-crop  Do not crop the output based on console width<br>       –no-color      Disable color output even if supported</arg></p>
+<h2 id="where-is-the-parquet-file-to-print-to-stdout"><a href="#where-is-the-parquet-file-to-print-to-stdout" class="headerlink" title="where  is the parquet file to print to stdout"></a>where <input> is the parquet file to print to stdout</h2><p>后面再介绍一下最强挑战者，ORC</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/partquet/" rel="tag"># partquet</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/02/24/Yarn源码分析4-资源调度算法/" rel="next" title="Yarn源码分析4-资源调度算法">
+                <i class="fa fa-chevron-left"></i> Yarn源码分析4-资源调度算法
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/04/12/2018-04-12_序列化与压缩/" rel="prev" title="序列化与压缩">
+                序列化与压缩 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-适配通用性"><span class="nav-number">1.</span> <span class="nav-text">1. 适配通用性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-存储空间优化"><span class="nav-number">2.</span> <span class="nav-text">2. 存储空间优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-什么叫列式存储"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 什么叫列式存储?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Parquet的数据模型"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Parquet的数据模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Parquet的数据模型-1"><span class="nav-number">2.3.</span> <span class="nav-text">2.2 Parquet的数据模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-Striping-Assembly算法"><span class="nav-number">2.4.</span> <span class="nav-text">2.3 Striping/Assembly算法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-1-Repetition-Levels"><span class="nav-number">2.4.1.</span> <span class="nav-text">2.3.1 Repetition Levels</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-2-Definition-Levels"><span class="nav-number">2.4.2.</span> <span class="nav-text">2.3.2 Definition Levels</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-3-一个完整的例子"><span class="nav-number">2.4.3.</span> <span class="nav-text">2.3.3 一个完整的例子</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-Parquet文件格式"><span class="nav-number">2.5.</span> <span class="nav-text">2.4 Parquet文件格式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-计算时间优化"><span class="nav-number">3.</span> <span class="nav-text">3. 计算时间优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-映射下推"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 映射下推</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-谓词下推"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 谓词下推</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-性能表现"><span class="nav-number">4.</span> <span class="nav-text">4. 性能表现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5-Parquet上手探索"><span class="nav-number">5.</span> <span class="nav-text">5. Parquet上手探索</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#where-is-the-parquet-file-to-print-to-stdout"><span class="nav-number">5.1.</span> <span class="nav-text">where  is the parquet file to print to stdout</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

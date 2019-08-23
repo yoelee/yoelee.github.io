@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="TCE,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="TCP网络拥塞控制 liyakun.hit  2017-11-17 1. 背景所有的网络协议都是为了最大化的利用网络资源，一直到网络出现拥塞。 拥塞发生的根本原因是资源不足以满足用户的需求，这些资源包括缓存空间、链路带宽容量和中间节点的处理能力。由于互联网的设计机制导致其在网络资源不足时无法限制用户的数量，只能依靠降低服务质量继续为用户服务，也就是”尽力而为”的服务。 增加缓存空间、链路带宽、中间">
+<meta name="keywords" content="TCE">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP网络拥塞控制">
+<meta property="og:url" content="http://yoursite.com/2017/11/17/TCP网络拥塞控制/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="TCP网络拥塞控制 liyakun.hit  2017-11-17 1. 背景所有的网络协议都是为了最大化的利用网络资源，一直到网络出现拥塞。 拥塞发生的根本原因是资源不足以满足用户的需求，这些资源包括缓存空间、链路带宽容量和中间节点的处理能力。由于互联网的设计机制导致其在网络资源不足时无法限制用户的数量，只能依靠降低服务质量继续为用户服务，也就是”尽力而为”的服务。 增加缓存空间、链路带宽、中间">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2019-08-23T06:05:09.177Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TCP网络拥塞控制">
+<meta name="twitter:description" content="TCP网络拥塞控制 liyakun.hit  2017-11-17 1. 背景所有的网络协议都是为了最大化的利用网络资源，一直到网络出现拥塞。 拥塞发生的根本原因是资源不足以满足用户的需求，这些资源包括缓存空间、链路带宽容量和中间节点的处理能力。由于互联网的设计机制导致其在网络资源不足时无法限制用户的数量，只能依靠降低服务质量继续为用户服务，也就是”尽力而为”的服务。 增加缓存空间、链路带宽、中间">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/11/17/TCP网络拥塞控制/">
+
+
+
+
+
+  <title>TCP网络拥塞控制 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/11/17/TCP网络拥塞控制/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="亚坤">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">TCP网络拥塞控制</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-11-17T10:35:23+08:00">
+                2017-11-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/网络/" itemprop="url" rel="index">
+                    <span itemprop="name">网络</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>TCP网络拥塞控制</p>
+<p>liyakun.hit  2017-11-17</p>
+<h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h1><p>所有的网络协议都是为了最大化的利用网络资源，一直到网络出现拥塞。</p>
+<p>拥塞发生的根本原因是资源不足以满足用户的需求，这些资源包括缓存空间、链路带宽容量和中间节点的处理能力。由于互联网的设计机制导致其在网络资源不足时无法限制用户的数量，只能依靠降低服务质量继续为用户服务，也就是”尽力而为”的服务。</p>
+<p>增加缓存空间、链路带宽、中间节点处理能力，可以缓解拥塞的情况，但本身无法根本解决拥塞的问题，拥塞其实是一个动态问题，无法用一个静态的方法解决。</p>
+<h1 id="2-标准TCP拥塞控制机制"><a href="#2-标准TCP拥塞控制机制" class="headerlink" title="2. 标准TCP拥塞控制机制"></a>2. 标准TCP拥塞控制机制</h1><p>TCP的拥塞控制机制由4个核心策略组成：</p>
+<ol>
+<li>慢启动(Slow Start)</li>
+<li>拥塞避免(Congestion voidance)</li>
+<li>快速重传(Fast Retransmit)</li>
+<li>快速恢复(Fast Recovery)</li>
+</ol>
+<h2 id="2-1-慢启动"><a href="#2-1-慢启动" class="headerlink" title="2.1 慢启动"></a>2.1 慢启动</h2><p>在一个应用初次使用网络时，不能一开始就发送大量的数据包，因为，很容易导致网络中的路由器缓存空间耗尽，从而发生拥塞。为了避免这种情况，可以刚开始的时候发很少的数据包，然后再根据网络给的反馈情况逐步的增加单次发送量(拥塞窗口，congestion window，cwnd)，这就是慢启动。</p>
+<p>事实上，TCP中的慢启动的速度是指数级，这个速度可是一点也不慢，只是起点低而已。</p>
+<h2 id="2-2-拥塞避免"><a href="#2-2-拥塞避免" class="headerlink" title="2.2 拥塞避免"></a>2.2 拥塞避免</h2><p>从慢启动来看，单次发送报文量的增长速度非常快，但是不能让它一直增长下去，一定得有个限制才行。TCP使用了一个叫慢启动门限(ssthresh)的变量，当cwnd超过该值后，慢启动过程结束，进入拥塞避免阶段。对于大多数TCP实现来说，ssthresh的值是65536(字节)。</p>
+<p>拥塞避免的主要思想是加法增大，也就是cwnd的值不再指数级往上升，开始加法增加。此时当窗口中所有的报文段都被确认时，cwnd的大小加1，cwnd的值就随着RTT(Round Trip Time)开始线性增加，这样就可以避免增长过快导致网络拥塞，慢慢的增加调整到网络的最佳值。</p>
+<p>TCP对于每个报文段都有一个重传定时器(RTO)，当RTO超时且没有得到数据确认，就会对报文进行重传，TCP判断网络拥塞的主要依据就是它重传了一个报文段，在它认为拥塞时，反应很强烈：</p>
+<ol>
+<li>把ssthresh降低为当前的cwnd值的一半</li>
+<li>把cwnd值重新设置为1</li>
+<li>重新进入慢启动过程<br>一旦出现丢包，那么立即减半退避，可以给其他新建的数据流留出足够的空间，从而保证了整体的公平性。</li>
+</ol>
+<p>拥塞避免算法不能够完全的避免网络拥塞，通过控制拥塞窗口的大小只能使网络不易出现拥塞。</p>
+<h2 id="2-3-快速重传"><a href="#2-3-快速重传" class="headerlink" title="2.3 快速重传"></a>2.3 快速重传</h2><p>接收端在收到乱序到达的包时会立即发送当前收到的有序的包的最后一个包的ACK，如果发送端连续3次收到了相同的ACK，此时TCP会认为网络发生了拥塞，然后进行跟上面一样的强烈的反映。这个机制因为不需要等待计时器超时，所以被叫做快速重传。</p>
+<ol>
+<li>把ssthresh降低为当前的cwnd值的一半</li>
+<li>把cwnd值重新设置为1</li>
+<li>重新进入慢启动过程 </li>
+</ol>
+<p><strong>上面的慢启动、拥塞避免、快速重传组合起来叫做Tahoe算法</strong></p>
+<p>核心思想是：让cwnd以指数增长方式迅速逼近可用信道容量，然后慢慢接近均衡。但是也有一点非常不足的地方，就是在超时或者收到3个重复ACK的时候，它会直接进入慢启动阶段，这个一方面会引起网络的激烈震荡，另一方面大大降低了网络的利用率。正是因为这样的不足，才有了下面的快速恢复算法。</p>
+<h2 id="2-4-快速恢复"><a href="#2-4-快速恢复" class="headerlink" title="2.4 快速恢复"></a>2.4 快速恢复</h2><h3 id="2-4-1第一版-Reno"><a href="#2-4-1第一版-Reno" class="headerlink" title="2.4.1第一版-Reno"></a>2.4.1第一版-Reno</h3><p>在收到3个重复的ACK之后，则发出重传的报文段，然后：</p>
+<ul>
+<li>如果收到一个新的重复的ACK，就把cwnd加1</li>
+<li>如果收到了非重复的ACK，则置cwnd = ssthresh，并进入拥塞避免阶段</li>
+<li>如果发生了超时，则设置ssthresh为当前cwnd的一半，cwnd = 1，进入慢启动阶段。</li>
+</ul>
+<p>为什么要收到一个新的重复的ACK之后，要把cwnd加1呢，是因为遵守数据包守恒原则，即同一个时刻在网络中的数据包数量恒定，在收到一个新的重复的ACK时，代表着一个“老”数据包离开了，此时向网络中发送“新”的数据包进行补充。</p>
+<h3 id="2-4-2-第二版-NewReno"><a href="#2-4-2-第二版-NewReno" class="headerlink" title="2.4.2 第二版-NewReno"></a>2.4.2 第二版-NewReno</h3><p>NewReno在Reno快速恢复的基础上稍加了修改，可以恢复一个窗口内多个包丢失的情况。</p>
+<p>具体来讲就是：Reno在收到一个新的数据的ACK时就退出了快速恢复状态了，而NewReno需要收到该窗口内所有数据包的确认后才会退出快速恢复状态，从而更一步提高吞吐量。</p>
+<h3 id="2-4-3-另一个选择-SACK"><a href="#2-4-3-另一个选择-SACK" class="headerlink" title="2.4.3 另一个选择-SACK"></a>2.4.3 另一个选择-SACK</h3><p>其实SACK并不是第三版快速恢复方案，而是一个可供选择的另一种解决方案。</p>
+<p>SACK就是改变TCP的确认机制，最初的TCP只确认当前已连续收到的数据，SACK则把乱序等信息会全部告诉对方，从而减少数据发送方重传的盲目性。比如说序号1，2，3，5，7的数据收到了，那么普通的ACK只会确认序列号4，而SACK会把当前的5，7已经收到的信息在SACK选项里面告知对端，从而提高性能，当使用SACK的时候，NewReno算法可以不使用，因为SACK本身携带的信息就可以使得发送方有足够的信息来知道需要重传哪些包，而不需要重传哪些包。</p>
+<p>NewReno每个RTT内只能恢复一个丢失的数据包，所以如果丢失了N个数据包，那么Fast Recovery就要持续N*RTT的时间，当N比较大时，这是一段相当长的时间。而SACK则没有这个限制，依靠SACK option的信息，它能够同时恢复多个数据包，更加快速和平稳的恢复。但是SACK有一个问题，就是每次遍历需要消耗大量的CPU，时间复杂度为n^2，n为packets in flight的数量。</p>
+<p><strong>如果把网络拥塞的解决方案放在交通拥塞上面会是一个什么情况呢？</strong></p>
+<p>修路、修停车场都是静态的解决方案，可能在流量小的城市能解决问题，但是在北京这样的城市，只能缓解问题。</p>
+<ol>
+<li>刚开始的时候路还行，车不算多，让大家自由买车，这个多少有点慢启动的意思。</li>
+<li>但是到达某个阈值开始，摇号政策就出现了，只能线性增长，这个就是拥塞避免的策略了。</li>
+<li>经过一些量化的指标来看，还是堵，干脆直接进行单双号限号(每天限5个号)，后来感觉带宽还够，又变成每天限2个号，这个过程虽然只做了一次，但是多少有点快速恢复的意思。</li>
+</ol>
+<p>但是，这些手段是不是都一如既往的有点过于简单粗暴了呢？</p>
+<p>有没有一种更加人性化一点策略？于是就引出了下面的ECN(Explicit Congestion Notification，显式拥塞通知)。</p>
+<h1 id="3-ECN"><a href="#3-ECN" class="headerlink" title="3. ECN"></a>3. ECN</h1><p>ECN的基本原理是：路由器在出现拥塞时把拥塞的信息写到报文中，发给接收者，然后接收者在得知拥塞后，再把标识反馈给发送者。发送者收到消息之后，就减少发送数据包，直到拥塞解除。</p>
+<p>在介绍ECN之前，需要先了解一下AQM和RED。</p>
+<h2 id="3-1-AQM"><a href="#3-1-AQM" class="headerlink" title="3.1 AQM"></a>3.1 AQM</h2><p>TCP中的数据包在拥塞时会暂留在路由器的缓存上，原始的路由器会使用FIFO的方式处理数据包，并且在队列满的时候，会把新来的数据包都丢弃，这样可能会导致多个TCP流同时检测到丢包，削减拥塞窗口，并进行对应的数据包重传流程。</p>
+<p>后来的路由器会有一个管理缓存队列的机制，这个机制就是AQM(active queue management)机制。AQM机制则会在路由器队列满之前探测到拥塞，并提供一个拥塞指示。这个指标可以是丢弃特定的包，也可以是后面会介绍的CE(Congestion Experienced)，这样就削减了丢包重传的影响，降低了网络延迟。</p>
+<h2 id="3-2-RED"><a href="#3-2-RED" class="headerlink" title="3.2 RED"></a>3.2 RED</h2><p>Random Early Detection (RED)则是AQM机制中用来探测拥塞和控制拥塞标记的一种方法。RED中有两个门限一个是minthresh，另外一个是maxthresh，当平均队列长度小于minthresh的时候，这个数据包总是会被接收处理，当平均队列长度超过maxthresh的时候，这个数据包总是会被用来指示拥塞(可能通过丢包或者设置CE来指示拥塞)，当平均队列长度位于二者之间的时候，则会有一定的概率这个数据包被用来指示拥塞。</p>
+<h2 id="3-3-ECN"><a href="#3-3-ECN" class="headerlink" title="3.3 ECN"></a>3.3 ECN</h2><p>先说一下标准TCP在拥塞处理时的问题：</p>
+<ol>
+<li>丢包导致TCP重传，该重传定时器的时间较长，对时延敏感的应用来说，影响用户感受。</li>
+<li>丢包之后，所有TCP开始进行退避，下调发送性能，拥塞得到缓解，但此时的网络利用率无法达到最优。</li>
+<li>在拥塞缓解之后，TCP为了获得发送的最优性能，又继续扩大发送窗口，直到发现丢包，重复上述问题过程。</li>
+</ol>
+<p>路由器的转发队列通常实现了RED功能，即路由器会根据当前队列的平均长度来做丢包决策，并随机丢弃一些TCP报文段，而不是等到队列满载，很好地避免了所有TCP同时超时的问题。</p>
+<p>但是并没有解决第1个问题，ECN(Explicit Congestion Notification)则是在AQM机制的基础上，路由器显式指示TCP发生拥塞的的一种机制，中文一般称为显式拥塞通知。这种机制很好的解决了第一个问题。</p>
+<p>路由器在出现拥塞时通知TCP。当TCP段传递时，路由器使用IP首部中的2位来记录拥塞，当TCP段到达后，接收方知道报文段是否在某个位置经历过拥塞，接收方使用下一个ACK通知发送方有拥塞发生，然后，发送方做出响应，缩小自己的拥塞窗口。</p>
+<p>如果用在交通拥塞管理上面，可以这么理解，你想去一个地方玩，刚好有人走过了相同的路已经到了，他发了个微信告诉你路上有点堵，让你晚一点再出门，是不是人性化了很多？</p>
+<p>但是有一点，如果网络超级拥塞，ECN的包也会被丢弃掉。</p>
+<h3 id="3-3-1-性能影响"><a href="#3-3-1-性能影响" class="headerlink" title="3.3.1 性能影响"></a>3.3.1 性能影响</h3><p>ECN减少TCP连接中被丢弃的数据包数量，以避免重传、减少等待时间，尤其是网络抖动。</p>
+<p>ECN对批量吞吐的效果不太明确，因为现代的TCP实现在发送方的窗口足够大时对于及时处理段丢失相当友好。</p>
+<p>ECN的使用已被发现在高度拥塞的网络上是有害的，AQM算法使数据包不会被丢弃。现代的AQM实现在极高负载下会丢包而非标记包来避免这个陷阱。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/TCE/" rel="tag"># TCE</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/08/29/从一个小程序看SparkCore源码/" rel="next" title="从一个小程序看 spark core 源码">
+                <i class="fa fa-chevron-left"></i> 从一个小程序看 spark core 源码
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/04/log4j源码分析/" rel="prev" title="log4j源码分析(基于1.2.17版本)">
+                log4j源码分析(基于1.2.17版本) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+            
+              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-背景"><span class="nav-number">1.</span> <span class="nav-text">1. 背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-标准TCP拥塞控制机制"><span class="nav-number">2.</span> <span class="nav-text">2. 标准TCP拥塞控制机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-慢启动"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 慢启动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-拥塞避免"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 拥塞避免</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-快速重传"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 快速重传</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-快速恢复"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 快速恢复</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-1第一版-Reno"><span class="nav-number">2.4.1.</span> <span class="nav-text">2.4.1第一版-Reno</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-2-第二版-NewReno"><span class="nav-number">2.4.2.</span> <span class="nav-text">2.4.2 第二版-NewReno</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-3-另一个选择-SACK"><span class="nav-number">2.4.3.</span> <span class="nav-text">2.4.3 另一个选择-SACK</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-ECN"><span class="nav-number">3.</span> <span class="nav-text">3. ECN</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-AQM"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 AQM</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-RED"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 RED</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3-ECN"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 ECN</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-1-性能影响"><span class="nav-number">3.3.1.</span> <span class="nav-text">3.3.1 性能影响</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

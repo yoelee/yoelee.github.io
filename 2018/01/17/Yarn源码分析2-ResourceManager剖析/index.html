@@ -6,12 +6,12 @@
 
 
 <html class="theme-next muse use-motion" lang="en">
-<head><meta name="generator" content="Hexo 3.9.0">
-  <meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <meta name="theme-color" content="#222">
-<meta name="google-site-verification" content="u51Tw-7XO-kfvd_YjNzNs4-HpCBkVQe3St8W8bIKI2w">
+<meta name="google-site-verification" content="u51Tw-7XO-kfvd_YjNzNs4-HpCBkVQe3St8W8bIKI2w" />
 
 
 
@@ -21,8 +21,8 @@
 
 
 
-<meta http-equiv="Cache-Control" content="no-transform">
-<meta http-equiv="Cache-Control" content="no-siteapp">
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
 
 
 
@@ -41,7 +41,7 @@
 
   
   
-  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
 
 
 
@@ -49,9 +49,9 @@
 
 
 
-<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
 
-<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
@@ -69,7 +69,7 @@
 
 
 
-  <meta name="keywords" content="hadoop,yarn,">
+  <meta name="keywords" content="hadoop,yarn," />
 
 
 
@@ -81,24 +81,25 @@
 
 
 <meta name="description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
-<meta name="keywords" content="hadoop,yarn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Yarn源码分析2-ResourceManager剖析1">
-<meta property="og:url" content="https://yoelee.github.io/2018/01/17/Yarn源码分析2-ResourceManager剖析/index.html">
+<meta property="og:url" content="https://yoelee.github.io/2018/01/17/Yarn%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902-ResourceManager%E5%89%96%E6%9E%90/index.html">
 <meta property="og:site_name" content="亚坤的博客">
 <meta property="og:description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
-<meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2019-08-14T16:28:29.080Z">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2018-01-17T12:47:16.000Z">
+<meta property="article:modified_time" content="2019-08-14T16:28:29.000Z">
+<meta property="article:author" content="亚坤">
+<meta property="article:tag" content="hadoop">
+<meta property="article:tag" content="yarn">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Yarn源码分析2-ResourceManager剖析1">
-<meta name="twitter:description" content="Yarn源码分析2-ResourceManager剖析1《Hadoop技术内幕-深入解析YARN架构设计与实现原理》学习笔记。  (Yarn源码基于Hadoop 3.X) Yarn源码小组讨论班2018-01-17 ResourceManager(RM)是整个YARN集群的大脑    它的设计直接决定了系统的可用性、可扩展性和容错性等特点，下面是分享的主要内容： 第一次分享：概览 第二次分享：专题">
 
 
 
 <script type="text/javascript" id="hexo.configurations">
   var NexT = window.NexT || {};
   var CONFIG = {
-    root: '/',
+    root: '',
     scheme: 'Muse',
     version: '5.1.4',
     sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
@@ -121,7 +122,7 @@
 
 
 
-  <link rel="canonical" href="https://yoelee.github.io/2018/01/17/Yarn源码分析2-ResourceManager剖析/">
+  <link rel="canonical" href="https://yoelee.github.io/2018/01/17/Yarn源码分析2-ResourceManager剖析/"/>
 
 
 
@@ -137,7 +138,7 @@
 
 
 
-</head>
+<meta name="generator" content="Hexo 6.3.0"></head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="en">
 
@@ -155,7 +156,7 @@
     
 
     <div class="custom-logo-site-title">
-      <a href="/" class="brand" rel="start">
+      <a href="/"  class="brand" rel="start">
         <span class="logo-line-before"><i></i></span>
         <span class="site-title">亚坤的博客</span>
         <span class="logo-line-after"><i></i></span>
@@ -183,9 +184,9 @@
       
         
         <li class="menu-item menu-item-home">
-          <a href="/" rel="section">
+          <a href="/%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
             
             Home
           </a>
@@ -193,9 +194,9 @@
       
         
         <li class="menu-item menu-item-about">
-          <a href="/about/" rel="section">
+          <a href="/about/%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
             
             About
           </a>
@@ -203,9 +204,9 @@
       
         
         <li class="menu-item menu-item-tags">
-          <a href="/tags/" rel="section">
+          <a href="/tags/%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
             
             Tags
           </a>
@@ -213,9 +214,9 @@
       
         
         <li class="menu-item menu-item-categories">
-          <a href="/categories/" rel="section">
+          <a href="/categories/%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
             
             Categories
           </a>
@@ -223,9 +224,9 @@
       
         
         <li class="menu-item menu-item-archives">
-          <a href="/archives/" rel="section">
+          <a href="/archives/%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
             
             Archives
           </a>
@@ -233,9 +234,9 @@
       
         
         <li class="menu-item menu-item-sitemap">
-          <a href="/sitemap.xml" rel="section">
+          <a href="/sitemap.xml%20" rel="section">
             
-              <i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br>
+              <i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br />
             
             Sitemap
           </a>
@@ -274,11 +275,11 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://yoelee.github.io/2018/01/17/Yarn源码分析2-ResourceManager剖析/">
+    <link itemprop="mainEntityOfPage" href="https://yoelee.github.io/2018/01/17/Yarn%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902-ResourceManager%E5%89%96%E6%9E%90/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="亚坤">
-      <meta itemprop="description" content>
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
       <meta itemprop="image" content="/images/avatar.jpg">
     </span>
 
@@ -314,7 +315,7 @@
           </span>
 
           
-            <span class="post-category">
+            <span class="post-category" >
             
               <span class="post-meta-divider">|</span>
             
@@ -511,7 +512,7 @@
 <tr>
 <th align="left">序号</th>
 <th align="left">组件名称</th>
-<th align="left">服务/事件处理器</th>
+<th align="left">服务&#x2F;事件处理器</th>
 <th align="left">处理的事件类型</th>
 <th align="left">输出事件类型</th>
 </tr>
@@ -641,7 +642,7 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/01/12/Yarn源码分析1-设计理念与基本架构/" rel="next" title="Yarn源码分析1-设计理念与基本架构">
+              <a href="/2018/01/12/Yarn%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901-%E8%AE%BE%E8%AE%A1%E7%90%86%E5%BF%B5%E4%B8%8E%E5%9F%BA%E6%9C%AC%E6%9E%B6%E6%9E%84/" rel="next" title="Yarn源码分析1-设计理念与基本架构">
                 <i class="fa fa-chevron-left"></i> Yarn源码分析1-设计理念与基本架构
               </a>
             
@@ -651,7 +652,7 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2018/01/26/Yarn源码分析3-NodeManager剖析1/" rel="prev" title="Yarn源码分析3-NodeManager剖析1">
+              <a href="/2018/01/26/Yarn%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903-NodeManager%E5%89%96%E6%9E%901/" rel="prev" title="Yarn源码分析3-NodeManager剖析1">
                 Yarn源码分析3-NodeManager剖析1 <i class="fa fa-chevron-right"></i>
               </a>
             
@@ -719,9 +720,11 @@
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
-              <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="亚坤">
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
             
-              <p class="site-author-name" itemprop="name">亚坤</p>
+              <p class="site-author-name" itemprop="name"></p>
               <p class="site-description motion-element" itemprop="description"></p>
           </div>
 
@@ -730,9 +733,9 @@
             
               <div class="site-state-item site-state-posts">
               
-                <a href="/archives/">
+                <a href="/archives/%20%7C%7C%20archive">
               
-                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-count">15</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -743,7 +746,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">categories</span>
                 </a>
               </div>
@@ -754,7 +757,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">14</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
@@ -803,7 +806,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-RM概述"><span class="nav-number">1.</span> <span class="nav-text">1. RM概述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-RM内部架构"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 RM内部架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-RM事件与事件处理器"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 RM事件与事件处理器</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#End"><span class="nav-number">2.</span> <span class="nav-text">End</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-RM%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">1. RM概述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-RM%E5%86%85%E9%83%A8%E6%9E%B6%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 RM内部架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-RM%E4%BA%8B%E4%BB%B6%E4%B8%8E%E4%BA%8B%E4%BB%B6%E5%A4%84%E7%90%86%E5%99%A8"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 RM事件与事件处理器</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#End"><span class="nav-number">2.</span> <span class="nav-text">End</span></a></li></ol></div>
             
 
           </div>
@@ -823,7 +826,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>

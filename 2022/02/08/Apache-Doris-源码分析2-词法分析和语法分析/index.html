@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+<meta name="google-site-verification" content="u51Tw-7XO-kfvd_YjNzNs4-HpCBkVQe3St8W8bIKI2w" />
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="doris," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1234Apache Doris 源码分析2 - 词法分析和语法分析-- yakun-- 2022-02-08 21:59:45-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a  上回介绍了从 fe 进程启动, 到接收到一条 SQL 并执行的过程, 这回深入分析下 SQL 是如何从一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Apache Doris 源码分析2 - 词法分析和语法分析">
+<meta property="og:url" content="https://yoelee.github.io/2022/02/08/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902-%E8%AF%8D%E6%B3%95%E5%88%86%E6%9E%90%E5%92%8C%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="1234Apache Doris 源码分析2 - 词法分析和语法分析-- yakun-- 2022-02-08 21:59:45-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a  上回介绍了从 fe 进程启动, 到接收到一条 SQL 并执行的过程, 这回深入分析下 SQL 是如何从一">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-02-08T13:59:45.000Z">
+<meta property="article:modified_time" content="2023-01-29T06:12:38.804Z">
+<meta property="article:author" content="亚坤">
+<meta property="article:tag" content="doris">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yoelee.github.io/2022/02/08/Apache-Doris-源码分析2-词法分析和语法分析/"/>
+
+
+
+
+
+  <title>Apache Doris 源码分析2 - 词法分析和语法分析 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sitemap">
+          <a href="/sitemap.xml%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br />
+            
+            Sitemap
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yoelee.github.io/2022/02/08/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902-%E8%AF%8D%E6%B3%95%E5%88%86%E6%9E%90%E5%92%8C%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Apache Doris 源码分析2 - 词法分析和语法分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-02-08T21:59:45+08:00">
+                2022-02-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/doris/" itemprop="url" rel="index">
+                    <span itemprop="name">doris</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Apache Doris 源码分析2 - 词法分析和语法分析</span><br><span class="line">-- yakun</span><br><span class="line">-- 2022-02-08 21:59:45</span><br><span class="line">-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a</span><br></pre></td></tr></table></figure>
+
+<p>上回介绍了从 fe 进程启动, 到接收到一条 SQL 并执行的过程, 这回深入分析下 SQL 是如何从一个平平无奇的字符串, 变成了一个适合分析处理的对象的(AST 抽象语法树). 故事的起点还是回到上次的 handleQuery().</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line">//位置: fe/fe-core/src/main/java/org/apache/doris/qe/ConnectProcessor.java</span><br><span class="line"></span><br><span class="line">    private void handleQuery() &#123;</span><br><span class="line">        MetricRepo.COUNTER_REQUEST_ALL.increase(<span class="number">1L</span>);</span><br><span class="line">        // convert statement to Java string</span><br><span class="line">        String originStmt = null;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            byte[] <span class="built_in">bytes</span> = packetBuf.array();</span><br><span class="line">            <span class="built_in">int</span> ending = packetBuf.limit() - <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">while</span> (ending &gt;= <span class="number">1</span> &amp;&amp; <span class="built_in">bytes</span>[ending] == <span class="string">&#x27;\0&#x27;</span>) &#123;</span><br><span class="line">                ending--;</span><br><span class="line">            &#125;</span><br><span class="line">            originStmt = new String(<span class="built_in">bytes</span>, <span class="number">1</span>, ending, <span class="string">&quot;UTF-8&quot;</span>);</span><br><span class="line">            // 执行到这里, 已经获取到了用户的查询语句最原始的字符串: originStmt</span><br><span class="line">        &#125; catch (UnsupportedEncodingException e) &#123;</span><br><span class="line">            // impossible</span><br><span class="line">            LOG.error(<span class="string">&quot;UTF8 is not supported in this environment.&quot;</span>);</span><br><span class="line">            ctx.getState().setError(<span class="string">&quot;Unsupported character set(UTF-8)&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // 忽略了一些逻辑:</span><br><span class="line">        // 通过正则表达式的方式直接拒绝特定的 SQL</span><br><span class="line">        // 一些审计的工作, 记录一下谁在什么时候发来了一个什么查询语句</span><br><span class="line"></span><br><span class="line">        // execute this query.</span><br><span class="line">        StatementBase parsedStmt = null;</span><br><span class="line">        <span class="type">List</span>&lt;Pair&lt;StatementBase, Data.PQueryStatistics&gt;&gt; auditInfoList = Lists.newArrayList();</span><br><span class="line">        boolean alreadyAddedToAuditInfoList = false;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="type">List</span>&lt;StatementBase&gt; stmts = analyze(originStmt); // 重点<span class="number">1</span>: 词法分析和语法分析</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">int</span> i = <span class="number">0</span>; i &lt; stmts.size(); ++i) &#123;</span><br><span class="line">                alreadyAddedToAuditInfoList = false;</span><br><span class="line">                ctx.getState().reset();</span><br><span class="line">                <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    ctx.resetReturnRows();</span><br><span class="line">                &#125;</span><br><span class="line">                parsedStmt = stmts.get(i);</span><br><span class="line">                parsedStmt.setOrigStmt(new OriginStatement(originStmt, i));</span><br><span class="line">                parsedStmt.setUserInfo(ctx.getCurrentUserIdentity());</span><br><span class="line">                executor = new StmtExecutor(ctx, parsedStmt);</span><br><span class="line">                ctx.setExecutor(executor);</span><br><span class="line">                executor.execute(); // 重点<span class="number">2</span>: 执行一条语句</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (i != stmts.size() - <span class="number">1</span>) &#123;</span><br><span class="line">                    ctx.getState().serverStatus |= MysqlServerStatusFlag.SERVER_MORE_RESULTS_EXISTS;</span><br><span class="line">                    finalizeCommand();</span><br><span class="line">                &#125;</span><br><span class="line">                auditInfoList.add(new Pair&lt;&gt;(executor.getParsedStmt(), executor.getQueryStatisticsForAuditLog()));</span><br><span class="line">                alreadyAddedToAuditInfoList = true;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; catch (IOException e) &#123;</span><br><span class="line">           // 忽略了异常处理逻辑</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // that means execute some statement failed</span><br><span class="line">        <span class="keyword">if</span> (!alreadyAddedToAuditInfoList &amp;&amp; executor != null) &#123;</span><br><span class="line">            auditInfoList.add(new Pair&lt;&gt;(executor.getParsedStmt(), executor.getQueryStatisticsForAuditLog()));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // 忽略执行后的审计逻辑</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>先看重点1: 词法分析和语法分析 analyze(originStmt)的内部逻辑, 一会儿再看重点2.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">//位置:fe/fe-core/src/main/java/org/apache/doris/qe/ConnectProcessor.java</span><br><span class="line"></span><br><span class="line">    // analyze the origin stmt <span class="keyword">and</span> <span class="keyword">return</span> multi-statements</span><br><span class="line">    private <span class="type">List</span>&lt;StatementBase&gt; analyze(String originStmt) throws AnalysisException, DdlException &#123;</span><br><span class="line">        LOG.debug(<span class="string">&quot;the originStmts are: &#123;&#125;&quot;</span>, originStmt);</span><br><span class="line">        // Parse statement <span class="keyword">with</span> parser generated by CUP&amp;FLEX</span><br><span class="line">        SqlScanner <span class="built_in">input</span> = new SqlScanner(new StringReader(originStmt), ctx.getSessionVariable().getSqlMode());</span><br><span class="line">        // 上面这条语句, 使用jflex创建了一个词法分析器</span><br><span class="line">        // 词法配置文件位置: fe/fe-core/src/main/jflex/sql_scanner.flex</span><br><span class="line">        // 编译后生成的类文件位置: ./fe/fe-core/target/generated-sources/jflex/org/apache/doris/analysis/SqlScanner.java</span><br><span class="line">        // 相关介绍参考: https://github.com/jflex-de/jflex</span><br><span class="line"></span><br><span class="line">        SqlParser parser = new SqlParser(<span class="built_in">input</span>);</span><br><span class="line">        // 上面这条语句, 使用cup创建了一个语法分析器</span><br><span class="line">        // 语法配置文件位置: fe/fe-core/src/main/cup/sql_parser.cup</span><br><span class="line">        // 相关介绍参考: http://www2.cs.tum.edu/projects/cup/</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> SqlParserUtils.getMultiStmts(parser);</span><br><span class="line">        &#125; catch (Error e) &#123;</span><br><span class="line">            // 忽略异常处理逻辑</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="词法分析-jflex"><a href="#词法分析-jflex" class="headerlink" title="词法分析 jflex"></a>词法分析 jflex</h1><p>词法分析的主类是 SqlScanner.java, 这个代码文件是通过工具处理 sql_scanner.flex 而生成的代码. 那咱们就先分析一下这个原始的 .flex 文件.</p>
+<p>flex 文件的主要内容由 UserCode, Options and declarations, Lexical rules 三段组成, 段与段之间使用%%分割, 下面结合各段的内容, 分析一下其原理.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/jflex/sql_scanner.flex</span><br><span class="line">// 下面只是节选了部分 sql_scanner.flex 中的代码</span><br><span class="line"></span><br><span class="line">// <span class="number">1.</span> UserCode</span><br><span class="line">// 第一段内容会原封不动的生成的将来的 Java 类中, 主要是 package 和 <span class="keyword">import</span> 这些.</span><br><span class="line">package org.apache.doris.analysis;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.StringWriter;</span><br><span class="line"></span><br><span class="line">%%</span><br><span class="line"></span><br><span class="line">// <span class="number">2.</span> Options <span class="keyword">and</span> declarations</span><br><span class="line">// 第二段内容中以%开头的字符串是 options, 这些配置内容会由后续的生成器读取,</span><br><span class="line">//    其实就是所有配置项, 部分配置项是有参数的, 就直接在空格后写参数</span><br><span class="line">// 第二段内容中不以%开头的内容, 是宏定义的部分,</span><br><span class="line">//    这些宏定义都是 单词 = 正则表达式 的形式,</span><br><span class="line">//    比如: LineTerminator = \r|\n|\r\n, 单词也可以作为其它单词的正则表达式组成部分,</span><br><span class="line">//    这些宏定义会被第三段的 Rule 部分使用</span><br><span class="line">%<span class="keyword">class</span> <span class="title class_">SqlScanner</span> //代表了要生成的 JAVA 文件名是SqlScanner.java</span><br><span class="line">%cup  //代表和要介绍的语法生成工具 CUP 进行配合</span><br><span class="line">LineTerminator = \r|\n|\r\n // 宏定义都是 单词 = 正则表达式</span><br><span class="line">%state EOLHINT 代表了 EOLHINT 是一个合法的词</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">%%</span><br><span class="line"></span><br><span class="line">// <span class="number">3.</span> Lexical rules</span><br><span class="line">// 第三段内容的形式是 正则表达式和对应的 Action(Java代码), 代表了扫描到这个正则表达式时要执行的操作</span><br><span class="line">//    这里的操作主要是识别出是不是关键词, 还是普通的标识符, 或者注释, 或者运行操作符等,</span><br><span class="line">//    然后把扫描出的结果修改封装成一个token对象, 返回.</span><br><span class="line"></span><br><span class="line">// 每当扫描到字符,的时候, 就返回一个COMMA类型的token实例</span><br><span class="line"><span class="string">&quot;,&quot;</span> &#123; <span class="keyword">return</span> newToken(SqlParserSymbols.COMMA, null); &#125;</span><br><span class="line"></span><br><span class="line">// 扫描到一个注释的时候就把注释去掉</span><br><span class="line">&#123;QuotedIdentifier&#125; &#123;</span><br><span class="line">    // Remove the quotes</span><br><span class="line">    String trimmedIdent = yytext().substring(<span class="number">1</span>, yytext().length() - <span class="number">1</span>);</span><br><span class="line">    <span class="keyword">return</span> newToken(SqlParserSymbols.IDENT, SqlUtils.escapeUnquote(trimmedIdent));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// 扫描到一个关键字就返回kw_id.intValue()类型的token实例, 如果不是关键字而是一个普通的标识符就返回IDENT类型的token实例</span><br><span class="line">&#123;IdentifierOrKw&#125; &#123;</span><br><span class="line">  String text = yytext();</span><br><span class="line">  Integer kw_id = keywordMap.get(text.toLowerCase());</span><br><span class="line">  /* Integer kw_id = keywordMap.get(text); */</span><br><span class="line">  <span class="keyword">if</span> (kw_id != null) &#123;</span><br><span class="line">    // <span class="keyword">if</span> MODE_PIPES_AS_CONCAT <span class="keyword">is</span> <span class="keyword">not</span> active, treat <span class="string">&#x27;||&#x27;</span> symbol <span class="keyword">as</span> same <span class="keyword">as</span> <span class="string">&#x27;or&#x27;</span> symbol</span><br><span class="line">    <span class="keyword">if</span> ((kw_id == SqlParserSymbols.KW_PIPE) &amp;&amp;</span><br><span class="line">      ((this.sql_mode &amp; SqlModeHelper.MODE_PIPES_AS_CONCAT) == <span class="number">0</span>)) &#123;</span><br><span class="line">      <span class="keyword">return</span> newToken(SqlParserSymbols.KW_OR, text);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> newToken(kw_id.intValue(), text);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> newToken(SqlParserSymbols.IDENT, text);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过上面的代码片段, 可以看出 jflex 词法分析这个函数的输入和输出分别为:</p>
+<ul>
+<li>输入:<ul>
+<li>一个 sql 字符串</li>
+<li>词法上来说, 所有合法的单词的正则表达式</li>
+<li>特定类型的单词的独特处理方法</li>
+<li>关键词&#x2F;操作符列表</li>
+</ul>
+</li>
+<li>输出:<ul>
+<li>一个可以返回单词列表, 或者抛出异常函数: public java_cup.runtime.Symbol next_token()</li>
+</ul>
+</li>
+</ul>
+<p>要完成从这种输入到输出的转换逻辑, flex 会构造有限状态自动机并放到输出的 JAVA 类中, JAVA类在扫描字符串的过程中通过这个有限状态自动机来找到一个单词(匹配过程使用最长匹配优先的原则), 有限状态自动机的原理比较通用, 大学编译原理课程里面都会学, 感兴趣的同学可以自行了解.</p>
+<h1 id="语法分析-cup"><a href="#语法分析-cup" class="headerlink" title="语法分析 cup"></a>语法分析 cup</h1><p>下面以 fe&#x2F;fe-core&#x2F;src&#x2F;main&#x2F;cup&#x2F;sql_parser.cup 文件的内容, 介绍一下 CUP 的规范说明.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line">// <span class="number">1.</span> package <span class="keyword">and</span> <span class="keyword">import</span> specifications</span><br><span class="line">// 第一部分是包名和 imports</span><br><span class="line">package org.apache.doris.analysis;</span><br><span class="line"><span class="keyword">import</span> java.math.BigDecimal;</span><br><span class="line"></span><br><span class="line">// <span class="keyword">class</span> <span class="title class_">name</span>;生成目标文件的类名, 但是doris里面没有写, 而是写在 pom 文件中了, 效果一致</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">// <span class="number">2.</span> user code components</span><br><span class="line">// 第二部分是用户要嵌入的代码, 这些代码会原封不动的嵌入到目标生成的类文件中</span><br><span class="line">// 根据需要不同, 共有<span class="number">4</span>个可选的嵌入用户自定义代码区域</span><br><span class="line">//     - a.  action code &#123;: ... :&#125;;  // doris 暂未使用</span><br><span class="line">//           这部分代码会直接放到未来生成的 action 类中</span><br><span class="line">//     - b.  parser code &#123;: ... :&#125;; // doris 声明了这部分</span><br><span class="line">//           这部分代码会直接放到未来生成的 解析器类 中</span><br><span class="line">//           doris 中重写了一部分逻辑包含:</span><br><span class="line">//               - public void syntax_error(Symbol token)</span><br><span class="line">//               - public void unrecovered_syntax_error(Symbol cur_token)</span><br><span class="line">//     - c.  init <span class="keyword">with</span> &#123;: ... :&#125;; // doris 暂未使用</span><br><span class="line">//           这部分在解析器获取第一个符号之前被执行, 通常用来初始化词法扫描器</span><br><span class="line">//     - d.  scan <span class="keyword">with</span>&#123;: ... :&#125;; // doris 暂未使用</span><br><span class="line">//           这部分代码是解析器应该怎么从词法扫描器获得下一个 token 的逻辑方法</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">// <span class="number">3.</span> symbol (terminal <span class="keyword">and</span> non-terminal) lists</span><br><span class="line">// 第三部分是终结符和非终结符的列表</span><br><span class="line">// 终结符是不可再分割的符号, 在语法树的叶子节点上; 非终结符是除了终结符以外的其它的符号</span><br><span class="line"></span><br><span class="line">// 像关键字, 运算符这些都属于终结符</span><br><span class="line">terminal String KW_ADD, KW_ADMIN, KW_AFTER, KW_AGGREGATE, KW_ALIAS, KW_ALL, KW_ALTER, KW_AND</span><br><span class="line">terminal EQUAL, NOT, LESSTHAN, GREATERTHAN, SET_VAR;</span><br><span class="line"></span><br><span class="line">// 各种类型的 SQL 语句属于非终结符号</span><br><span class="line">nonterminal StatementBase stmt, show_stmt, show_param, help_stmt, load_stmt,</span><br><span class="line">nonterminal ValueList value_clause;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">// <span class="number">4.</span> precedence declarations</span><br><span class="line">// 第四部分优先级声明, 主要是介绍所有终结符的优先关系.</span><br><span class="line">// 优先级关系包含两个层级:</span><br><span class="line">//     - 第<span class="number">1</span>层级: 不同终结符之间的对比, 比如 <span class="number">1</span> + <span class="number">2</span>/<span class="number">3</span> 乘法优先级比加法要高</span><br><span class="line">//               第<span class="number">1</span>层级规则是:</span><br><span class="line">//                   - 越早声明的语句中的终结符优先级越低, 写在最后一条的语句中的终结符优先级最高</span><br><span class="line">//                   - 没写优先级的所有终结符优先级都是最低的</span><br><span class="line">//     - 第<span class="number">2</span>层级: 相同终结符的不同实例的对比, 比如 <span class="number">1</span>+<span class="number">2</span>+<span class="number">3</span> 从左往右开始计算, <span class="number">1</span>==<span class="number">2</span>==<span class="number">3</span> 不合法.</span><br><span class="line">//               第<span class="number">2</span>层级规则是: 通过下面 left / right / nonassoc 符号来区分:</span><br><span class="line">// 	                 precedence left     terminal[, terminal...]; 左结合, 从左往右执行</span><br><span class="line">//	                 precedence right    terminal[, terminal...]; 右结合, 从右往左执行</span><br><span class="line">//	                 precedence nonassoc terminal[, terminal...]; 不结合, 不允许连续出现</span><br><span class="line"></span><br><span class="line">// 优先级上来看, <span class="keyword">not</span> &gt; <span class="keyword">and</span> &gt; <span class="keyword">or</span>, 且这些符号都是左结合的, 从左往右执行</span><br><span class="line">precedence left KW_OR;</span><br><span class="line">precedence left KW_AND;</span><br><span class="line">precedence left KW_NOT, NOT;</span><br><span class="line"></span><br><span class="line">// 临时表是右结合的, 代表从右往左执行</span><br><span class="line">precedence right KW_TEMPORARY;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">// <span class="number">5.</span> the grammar</span><br><span class="line">// 第五部分声明语法, 是语法规则的集合</span><br><span class="line"></span><br><span class="line">start <span class="keyword">with</span> stmts; // 语法部分的开始, 代表了非终结符 stmts 是语法解析的目标</span><br><span class="line"></span><br><span class="line">// 语法往往开始于start声明之后, 每条语法规则的格式如下:</span><br><span class="line">//     - 每条规则最左边是一个非终结符，接着是一个“::=”符号，</span><br><span class="line">//     - 紧跟着是零个或多个动作、终结符、非终结符，这些符号后面加一个<span class="string">&quot;:&quot;</span>符号就可以定义一个别名</span><br><span class="line">//     - &#123;: ... :&#125; 中间的...部分是用户定义的代码, 代表当识别到这个规则时要执行的动作.</span><br><span class="line">//     - 再接着是一个可选的语境优先级分配，</span><br><span class="line">//     - 最后由一个分号结束。</span><br><span class="line">// 如果一个非终结符可以由多种规则定义，那么这些规则应该放在一块声明, 规则之间用<span class="string">&quot;|&quot;</span>分隔.</span><br><span class="line"></span><br><span class="line">// Show statement</span><br><span class="line">// 总共有<span class="number">3</span>种规则, 分别用|分开了</span><br><span class="line">show_stmt ::=</span><br><span class="line">    KW_SHOW show_param:stmt  // stmt是show_param的别名, show_param是一个非终结符这里不展开了</span><br><span class="line">    &#123;:</span><br><span class="line">        RESULT = stmt; // 用户自定义 code</span><br><span class="line">    :&#125;</span><br><span class="line">    | KW_SHOW KW_SQL_BLOCK_RULE KW_FOR ident:ruleName // 规则show sql_block_rule <span class="keyword">for</span> 标识符ident</span><br><span class="line">    &#123;:</span><br><span class="line">        RESULT = new ShowSqlBlockRuleStmt(ruleName);</span><br><span class="line">        // 用户自定义 code, 这里返回的对象就是一个 AST 抽象语法树</span><br><span class="line">        // 这个对象的定义位置在:</span><br><span class="line">        // fe/fe-core/src/main/java/org/apache/doris/analysis/ShowSqlBlockRuleStmt.java</span><br><span class="line">    :&#125;</span><br><span class="line">    | KW_SHOW KW_SQL_BLOCK_RULE // 规则 show sql_block_rule;</span><br><span class="line">    &#123;:</span><br><span class="line">        RESULT = new ShowSqlBlockRuleStmt(null); // 用户自定义 code, 也是返回一个 AST.</span><br><span class="line">    :&#125;</span><br><span class="line">    ;</span><br><span class="line"></span><br><span class="line">// 语境优先级分配的示例</span><br><span class="line">analytic_expr ::=</span><br><span class="line">  function_call_expr:e KW_OVER LPAREN opt_partition_by_clause:p order_by_clause:o opt_window_clause:w RPAREN</span><br><span class="line">  &#123;:</span><br><span class="line">    // Handle cases where function_call_expr resulted <span class="keyword">in</span> a plain Expr</span><br><span class="line">    <span class="keyword">if</span> (!(e instanceof FunctionCallExpr)) &#123;</span><br><span class="line">      parser.parseError(<span class="string">&quot;over&quot;</span>, SqlParserSymbols.KW_OVER);</span><br><span class="line">    &#125;</span><br><span class="line">    FunctionCallExpr f = (FunctionCallExpr)e;</span><br><span class="line">    f.setIsAnalyticFnCall(true);</span><br><span class="line">    RESULT = new AnalyticExpr(f, p, o, w);</span><br><span class="line">  :&#125;</span><br><span class="line">  %prec KW_OVER //给予这个规则 KW_OVER 相同的优先级 (默认情况下优先级是来自最后一个终结符)</span><br><span class="line">  ;</span><br></pre></td></tr></table></figure>
+
+<p>CUP 的目标在用户给定语法规则的前提下, 构造一个语法解析器函数, 这个构造出来的函数可以接受一系列的 token, 返回一棵抽象语法树(AST). CUP 构造的语法解析器是 LALR(1) 解析器的一种实现, 感兴趣的同学可以去搜索一下相关的原理介绍.</p>
+<h2 id="什么是抽象语法树-AST"><a href="#什么是抽象语法树-AST" class="headerlink" title="什么是抽象语法树 (AST)"></a>什么是抽象语法树 (AST)</h2><p>在 Doris 的场景中, 使用了 jflex 作为词法分析器产生一系列的 token, 然后再使用 CUP 来将这些 token 组合成一系列的 AST 抽象语法树 List<StatementBase> stmts. 每棵 AST 树代表了一个 SQL 语句, 它在 Doris 中的数据结构是: StatementBase, 它是一个抽象类, 针对不同类型的 SQL 会基于这个抽象类有不同的实现, 比如 SelectStmt, InsertStmt, CreateTableStmt 等 170 种语法分别有各自的实现.</p>
+<p>以删库跑路的语句 DropDbStmt 为例来分析一下 AST 的结构:</p>
+<ul>
+<li>DropDbStmt<ul>
+<li>boolean ifExists</li>
+<li>String dbName</li>
+<li>boolean forceDrop</li>
+</ul>
+</li>
+</ul>
+<p>完整的代码可参考如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br></pre></td><td class="code"><pre><span class="line">//位置: fe/fe-core/src/main/java/org/apache/doris/analysis/DropDbStmt.java</span><br><span class="line">//DropDbStmt 这棵树比较简单, 只有两个层级, 语句里面只包含三个叶子节点</span><br><span class="line"></span><br><span class="line">// Licensed to the Apache Software Foundation (ASF) under one</span><br><span class="line">// <span class="keyword">or</span> more contributor license agreements.  See the NOTICE file</span><br><span class="line">// distributed <span class="keyword">with</span> this work <span class="keyword">for</span> additional information</span><br><span class="line">// regarding copyright ownership.  The ASF licenses this file</span><br><span class="line">// to you under the Apache License, Version <span class="number">2.0</span> (the</span><br><span class="line">// <span class="string">&quot;License&quot;</span>); you may <span class="keyword">not</span> use this file <span class="keyword">except</span> <span class="keyword">in</span> compliance</span><br><span class="line">// <span class="keyword">with</span> the License.  You may obtain a copy of the License at</span><br><span class="line">//</span><br><span class="line">//   http://www.apache.org/licenses/LICENSE-<span class="number">2.0</span></span><br><span class="line">//</span><br><span class="line">// Unless required by applicable law <span class="keyword">or</span> agreed to <span class="keyword">in</span> writing,</span><br><span class="line">// software distributed under the License <span class="keyword">is</span> distributed on an</span><br><span class="line">// <span class="string">&quot;AS IS&quot;</span> BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span><br><span class="line">// KIND, either express <span class="keyword">or</span> implied.  See the License <span class="keyword">for</span> the</span><br><span class="line">// specific language governing permissions <span class="keyword">and</span> limitations</span><br><span class="line">// under the License.</span><br><span class="line"></span><br><span class="line">package org.apache.doris.analysis;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.doris.catalog.Catalog;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.catalog.InfoSchemaDb;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.cluster.ClusterNamespace;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.common.ErrorCode;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.common.ErrorReport;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.common.UserException;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.mysql.privilege.PrivPredicate;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.qe.ConnectContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.google.common.base.Strings;</span><br><span class="line"></span><br><span class="line">// DROP DB表达式</span><br><span class="line">// 该语句用于删除数据库（database）</span><br><span class="line">// 语法：</span><br><span class="line">//    DROP DATABASE [IF EXISTS] db_name [FORCE];</span><br><span class="line">// 说明：</span><br><span class="line">//    <span class="number">1</span>) 执行 DROP DATABASE 一段时间内，可以通过 RECOVER 语句恢复被删除的数据库。详见 RECOVER 语句</span><br><span class="line">//    <span class="number">2</span>) 如果执行 DROP DATABASE FORCE，则系统不会检查该数据库是否存在未完成的事务，</span><br><span class="line">//       数据库将直接被删除并且不能被恢复，一般不建议执行此操作</span><br><span class="line"></span><br><span class="line">public <span class="keyword">class</span> <span class="title class_">DropDbStmt</span> extends DdlStmt &#123;</span><br><span class="line">    // 这棵树比较简单, 只包含三个叶子节点: ifExists, dbName, forceDrop</span><br><span class="line">    private boolean ifExists;</span><br><span class="line">    private String dbName;</span><br><span class="line">    private boolean forceDrop;</span><br><span class="line"></span><br><span class="line">    public DropDbStmt(boolean ifExists, String dbName, boolean forceDrop) &#123;</span><br><span class="line">        this.ifExists = ifExists;</span><br><span class="line">        this.dbName = dbName;</span><br><span class="line">        this.forceDrop = forceDrop;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public boolean isSetIfExists() &#123;</span><br><span class="line">        <span class="keyword">return</span> ifExists;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public String getDbName() &#123;</span><br><span class="line">        <span class="keyword">return</span> this.dbName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public boolean isForceDrop() &#123;</span><br><span class="line">        <span class="keyword">return</span> this.forceDrop;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">    @Override</span></span><br><span class="line">    public void analyze(Analyzer analyzer) throws UserException &#123;</span><br><span class="line">        <span class="built_in">super</span>.analyze(analyzer);</span><br><span class="line">        <span class="keyword">if</span> (Strings.isNullOrEmpty(dbName)) &#123; // db 名错误异常</span><br><span class="line">            ErrorReport.reportAnalysisException(ErrorCode.ERR_WRONG_DB_NAME, dbName);</span><br><span class="line">        &#125;</span><br><span class="line">        dbName = ClusterNamespace.getFullName(getClusterName(), dbName);</span><br><span class="line">        // Don<span class="string">&#x27;t allowed to drop &#x27;</span>information_schema<span class="string">&#x27;</span></span><br><span class="line"><span class="string">        if (dbName.equalsIgnoreCase(ClusterNamespace.getFullName(getClusterName(), InfoSchemaDb.DATABASE_NAME))) &#123;</span></span><br><span class="line"><span class="string">            // 不允许删除 &#x27;</span>information_schema<span class="string">&#x27;这个 db</span></span><br><span class="line"><span class="string">            ErrorReport.reportAnalysisException(ErrorCode.ERR_DB_ACCESS_DENIED, analyzer.getQualifiedUser(), dbName);</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        if (!Catalog.getCurrentCatalog().getAuth().checkDbPriv(ConnectContext.get(), dbName, PrivPredicate.DROP)) &#123;</span></span><br><span class="line"><span class="string">            // 此用户没有权限</span></span><br><span class="line"><span class="string">            ErrorReport.reportAnalysisException(ErrorCode.ERR_DB_ACCESS_DENIED,</span></span><br><span class="line"><span class="string">                                                ConnectContext.get().getQualifiedUser(), dbName);</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    @Override</span></span><br><span class="line"><span class="string">    public String toSql() &#123;</span></span><br><span class="line"><span class="string">        StringBuilder stringBuilder = new StringBuilder();</span></span><br><span class="line"><span class="string">        stringBuilder.append(&quot;DROP DATABASE &quot;).append(&quot;`&quot;).append(dbName).append(&quot;`&quot;);</span></span><br><span class="line"><span class="string">        return stringBuilder.toString();</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    @Override</span></span><br><span class="line"><span class="string">    public String toString() &#123;</span></span><br><span class="line"><span class="string">        return toSql();</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string"></span></span><br></pre></td></tr></table></figure>
+
+<p>如果分析 SelectStmt 会发现它的 AST 树要复杂很多, 结构如下:</p>
+<ul>
+<li>SelectStmt<ul>
+<li>SelectList selectList<ul>
+<li>boolean isDistinct</li>
+<li>Map&lt;String, String&gt; optHints</li>
+<li>List&lt;SelectListItem&gt; items<ul>
+<li>Expr expr</li>
+<li>TableName tblName</li>
+<li>boolean isStar</li>
+<li>String alias</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ArrayList&lt;String&gt; colLabels</li>
+<li>FromClause fromClause_<ul>
+<li>ArrayList&lt;TableRef&gt; tableRefs_</li>
+</ul>
+</li>
+<li>GroupByClause groupByClause<ul>
+<li>GroupingType groupingType</li>
+<li>ArrayList&lt;Expr&gt; groupingExprs</li>
+<li>ArrayList&lt;Expr&gt; oriGroupingExprs</li>
+<li>List&lt;ArrayList&lt;Expr&gt;&gt; groupingSetList</li>
+</ul>
+</li>
+<li>List&lt;Expr&gt; originalExpr</li>
+<li>Expr havingClause</li>
+<li>Expr whereClause</li>
+<li>Expr havingPred</li>
+<li>AggregateInfo aggInfo<ul>
+<li>AggregateInfo mergeAggInfo_</li>
+<li>AggregateInfo secondPhaseDistinctAggInfo_</li>
+<li>AggPhase aggPhase_;</li>
+<li>ExprSubstitutionMap intermediateTupleSmap_</li>
+<li>ExprSubstitutionMap outputTupleSmap_</li>
+<li>ExprSubstitutionMap outputToIntermediateTupleSmap_</li>
+<li>List&lt;Expr&gt; partitionExprs_</li>
+<li>ArrayList&lt;Integer&gt; materializedAggregateSlots_</li>
+<li>boolean isDistinctAgg</li>
+<li>boolean isMultiDistinct_</li>
+<li>ArrayList&lt;Integer&gt; firstIdx_</li>
+<li>ArrayList&lt;Integer&gt; lastIdx_</li>
+</ul>
+</li>
+<li>AnalyticInfo analyticInfo<ul>
+<li>ArrayList&lt;Expr&gt; analyticExprs_</li>
+<li>List&lt;Expr&gt; commonPartitionExprs_</li>
+<li>ExprSubstitutionMap analyticTupleSmap_<ul>
+<li>List&lt;Expr&gt; lhs_</li>
+<li>List&lt;Expr&gt; rhs_</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ExprSubstitutionMap baseTblSmap<ul>
+<li>List&lt;Expr&gt; lhs_</li>
+<li>List&lt;Expr&gt; rhs_</li>
+</ul>
+</li>
+<li>ValueList valueList<ul>
+<li>List&lt;ArrayList&lt;Expr&gt;&gt; rows</li>
+</ul>
+</li>
+<li>GroupingInfo groupingInfo<ul>
+<li>VirtualSlotRef groupingIDSlot<ul>
+<li>TupleDescriptor tupleDescriptor<ul>
+<li>TupleId id<ul>
+<li>int id</li>
+</ul>
+</li>
+<li>String debugName</li>
+<li>ArrayList&lt;SlotDescriptor&gt; slots<ul>
+<li>SlotId id</li>
+<li>TupleDescriptor parent</li>
+<li>SlotDescriptor src</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>List&lt;Expr&gt; realSlots</li>
+</ul>
+</li>
+<li>TupleDescriptor virtualTuple<ul>
+<li>TupleId id<ul>
+<li>int id</li>
+</ul>
+</li>
+<li>String debugName</li>
+<li>ArrayList&lt;SlotDescriptor&gt; slots<ul>
+<li>SlotId id</li>
+<li>TupleDescriptor parent</li>
+<li>SlotDescriptor src</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Set&lt;VirtualSlotRef&gt; groupingSlots<ul>
+<li>TupleDescriptor tupleDescriptor<ul>
+<li>TupleId id<ul>
+<li>int id</li>
+</ul>
+</li>
+<li>String debugName</li>
+<li>ArrayList&lt;SlotDescriptor&gt; slots<ul>
+<li>SlotId id</li>
+<li>TupleDescriptor parent</li>
+<li>SlotDescriptor src</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>List&lt;Expr&gt; realSlots</li>
+</ul>
+</li>
+<li>List&lt;BitSet&gt; groupingIdList</li>
+<li>GroupByClause.GroupingType groupingType</li>
+<li>BitSet bitSetAll</li>
+</ul>
+</li>
+<li>Expr havingClauseAfterAnaylzed</li>
+</ul>
+</li>
+</ul>
+<p>首层子树结构可参考如下的代码:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/analysis/SelectStmt.java</span><br><span class="line">public <span class="keyword">class</span> <span class="title class_">SelectStmt</span> extends QueryStmt &#123;</span><br><span class="line"></span><br><span class="line">    // 省略前面内容 ...</span><br><span class="line"></span><br><span class="line">    protected SelectList selectList;</span><br><span class="line">    private final ArrayList&lt;String&gt; colLabels; // lower <span class="keyword">case</span> column labels</span><br><span class="line">    protected final FromClause fromClause_;</span><br><span class="line">    protected GroupByClause groupByClause;</span><br><span class="line">    private <span class="type">List</span>&lt;Expr&gt; originalExpr;</span><br><span class="line">    //</span><br><span class="line">    private Expr havingClause;  // original having clause</span><br><span class="line">    protected Expr whereClause;</span><br><span class="line">    // havingClause <span class="keyword">with</span> aliases <span class="keyword">and</span> agg output resolved</span><br><span class="line">    private Expr havingPred;</span><br><span class="line"></span><br><span class="line">    // <span class="built_in">set</span> <span class="keyword">if</span> we have <span class="built_in">any</span> kind of aggregation operation, include SELECT DISTINCT</span><br><span class="line">    private AggregateInfo aggInfo;</span><br><span class="line">    // <span class="built_in">set</span> <span class="keyword">if</span> we have analytic function</span><br><span class="line">    private AnalyticInfo analyticInfo;</span><br><span class="line">    // substitutes <span class="built_in">all</span> exprs <span class="keyword">in</span> this select block to reference base tables</span><br><span class="line">    // directly</span><br><span class="line">    private ExprSubstitutionMap baseTblSmap = new ExprSubstitutionMap();</span><br><span class="line"></span><br><span class="line">    private ValueList valueList;</span><br><span class="line"></span><br><span class="line">    // <span class="keyword">if</span> we have grouping extensions like cube <span class="keyword">or</span> rollup <span class="keyword">or</span> grouping sets</span><br><span class="line">    private GroupingInfo groupingInfo;</span><br><span class="line"></span><br><span class="line">    // having clause which has been analyzed</span><br><span class="line">    // For example: select k1, <span class="built_in">sum</span>(k2) a <span class="keyword">from</span> t group by k1 having a&gt;<span class="number">1</span>;</span><br><span class="line">    // this parameter: <span class="built_in">sum</span>(t.k2) &gt; <span class="number">1</span></span><br><span class="line">    private Expr havingClauseAfterAnaylzed;</span><br><span class="line"></span><br><span class="line">    // 省略后续内容 ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="语法分析小结"><a href="#语法分析小结" class="headerlink" title="语法分析小结"></a>语法分析小结</h2><p>通过上面的分析可得到, 可以看出语法分析 cup 这个函数的输入和输出分别为:</p>
+<ul>
+<li>输入:<ul>
+<li>上面语法分析得到的单词列表 (或扫描器)</li>
+<li>终结符和非终结符的列表</li>
+<li>所有终结符的优先关系</li>
+<li>语法规则的集合</li>
+</ul>
+</li>
+<li>输出:<ul>
+<li>返回错误, 或者一个抽象语法树 (AST)</li>
+</ul>
+</li>
+</ul>
+<h1 id="埋个伏笔"><a href="#埋个伏笔" class="headerlink" title="埋个伏笔"></a>埋个伏笔</h1><p>以上就是词法分析和语法分析的所有相关的所有内容了, 想了解更多其它语句的 AST 结构, 可以自行去源码中查找. 另外还有一个值得一提的事情是, 所有的语句, 最终都会实现了接口: ParseNode.java, 这个接口的代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/analysis/ParseNode.java</span><br><span class="line"></span><br><span class="line">// Licensed to the Apache Software Foundation (ASF) under one</span><br><span class="line">// <span class="keyword">or</span> more contributor license agreements.  See the NOTICE file</span><br><span class="line">// distributed <span class="keyword">with</span> this work <span class="keyword">for</span> additional information</span><br><span class="line">// regarding copyright ownership.  The ASF licenses this file</span><br><span class="line">// to you under the Apache License, Version <span class="number">2.0</span> (the</span><br><span class="line">// <span class="string">&quot;License&quot;</span>); you may <span class="keyword">not</span> use this file <span class="keyword">except</span> <span class="keyword">in</span> compliance</span><br><span class="line">// <span class="keyword">with</span> the License.  You may obtain a copy of the License at</span><br><span class="line">//</span><br><span class="line">//   http://www.apache.org/licenses/LICENSE-<span class="number">2.0</span></span><br><span class="line">//</span><br><span class="line">// Unless required by applicable law <span class="keyword">or</span> agreed to <span class="keyword">in</span> writing,</span><br><span class="line">// software distributed under the License <span class="keyword">is</span> distributed on an</span><br><span class="line">// <span class="string">&quot;AS IS&quot;</span> BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span><br><span class="line">// KIND, either express <span class="keyword">or</span> implied.  See the License <span class="keyword">for</span> the</span><br><span class="line">// specific language governing permissions <span class="keyword">and</span> limitations</span><br><span class="line">// under the License.</span><br><span class="line"></span><br><span class="line">package org.apache.doris.analysis;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.doris.common.AnalysisException;</span><br><span class="line"><span class="keyword">import</span> org.apache.doris.common.UserException;</span><br><span class="line"></span><br><span class="line">public interface ParseNode &#123;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * Perform semantic analysis of node <span class="keyword">and</span> <span class="built_in">all</span> of its children.</span><br><span class="line">     * Throws exception <span class="keyword">if</span> <span class="built_in">any</span> errors found.</span><br><span class="line">     *</span><br><span class="line">     * @param analyzer</span><br><span class="line">     * @throws AnalysisException, InternalException</span><br><span class="line">     */</span><br><span class="line">    void analyze(Analyzer analyzer) throws UserException;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * @<span class="keyword">return</span> SQL syntax corresponding to this node.</span><br><span class="line">     */</span><br><span class="line">    String toSql();</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这个接口主要包含两个方法, 一个是转换为 String 类型的 Sql 语句, 一个是 analyze(Analyzer analyzer) 方法, 后面的分析中, 会重点分析一下这个 analyze 方法.</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/doris/" rel="tag"># doris</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/02/08/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901-%E4%BB%8E%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8%E5%88%B0%E6%8E%A5%E6%94%B6%E5%A4%84%E7%90%86SQL/" rel="next" title="Apache Doris 源码分析1 - 从进程启动到接收处理SQL">
+                <i class="fa fa-chevron-left"></i> Apache Doris 源码分析1 - 从进程启动到接收处理SQL
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%8D%E6%B3%95%E5%88%86%E6%9E%90-jflex"><span class="nav-number">1.</span> <span class="nav-text">词法分析 jflex</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90-cup"><span class="nav-number">2.</span> <span class="nav-text">语法分析 cup</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E6%8A%BD%E8%B1%A1%E8%AF%AD%E6%B3%95%E6%A0%91-AST"><span class="nav-number">2.1.</span> <span class="nav-text">什么是抽象语法树 (AST)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90%E5%B0%8F%E7%BB%93"><span class="nav-number">2.2.</span> <span class="nav-text">语法分析小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%8B%E4%B8%AA%E4%BC%8F%E7%AC%94"><span class="nav-number">3.</span> <span class="nav-text">埋个伏笔</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

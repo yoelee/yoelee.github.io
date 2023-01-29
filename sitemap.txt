@@ -27,9 +27,9 @@ https://yoelee.github.io/tags/distributed-system/
 https://yoelee.github.io/tags/doris/
 https://yoelee.github.io/tags/%E5%88%86%E4%BA%AB-YARN-hadoop-meetup/
 https://yoelee.github.io/tags/TCP/
+https://yoelee.github.io/tags/Flink-YARN-%E6%BA%90%E7%A0%81/
 https://yoelee.github.io/tags/hadoop/
 https://yoelee.github.io/tags/yarn/
-https://yoelee.github.io/tags/Flink-YARN-%E6%BA%90%E7%A0%81/
 https://yoelee.github.io/tags/scheduler/
 https://yoelee.github.io/tags/reserve/
 https://yoelee.github.io/tags/log4j/
@@ -39,8 +39,8 @@ https://yoelee.github.io/categories/bigdata/
 https://yoelee.github.io/categories/doris/
 https://yoelee.github.io/categories/%E5%88%86%E4%BA%AB/
 https://yoelee.github.io/categories/%E7%BD%91%E7%BB%9C/
-https://yoelee.github.io/categories/hadoop/
 https://yoelee.github.io/categories/Flink/
+https://yoelee.github.io/categories/hadoop/
 https://yoelee.github.io/categories/log4j/
-https://yoelee.github.io/categories/spark/
 https://yoelee.github.io/categories/hadoop/yarn/
+https://yoelee.github.io/categories/spark/

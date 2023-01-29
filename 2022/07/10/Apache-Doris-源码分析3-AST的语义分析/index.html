@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+<meta name="google-site-verification" content="u51Tw-7XO-kfvd_YjNzNs4-HpCBkVQe3St8W8bIKI2w" />
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="doris," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1234Apache Doris 源码分析3 - AST的语义分析-- yakun-- 2022-07-10 20:50:43-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a  上回分析了 SQL 是如何从一个平平无奇的字符串, 变成了一个适合分析处理的对象的(AST 抽象语法树),">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Apache Doris 源码分析3 - AST的语义分析">
+<meta property="og:url" content="https://yoelee.github.io/2022/07/10/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903-AST%E7%9A%84%E8%AF%AD%E4%B9%89%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="亚坤的博客">
+<meta property="og:description" content="1234Apache Doris 源码分析3 - AST的语义分析-- yakun-- 2022-07-10 20:50:43-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a  上回分析了 SQL 是如何从一个平平无奇的字符串, 变成了一个适合分析处理的对象的(AST 抽象语法树),">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-07-10T12:50:43.000Z">
+<meta property="article:modified_time" content="2023-01-29T06:25:36.959Z">
+<meta property="article:author" content="亚坤">
+<meta property="article:tag" content="doris">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Muse',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yoelee.github.io/2022/07/10/Apache-Doris-源码分析3-AST的语义分析/"/>
+
+
+
+
+
+  <title>Apache Doris 源码分析3 - AST的语义分析 | 亚坤的博客</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">亚坤的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-sitemap">
+          <a href="/sitemap.xml%20" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-sitemap"></i> <br />
+            
+            Sitemap
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yoelee.github.io/2022/07/10/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903-AST%E7%9A%84%E8%AF%AD%E4%B9%89%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="亚坤的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Apache Doris 源码分析3 - AST的语义分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2022-07-10T20:50:43+08:00">
+                2022-07-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/doris/" itemprop="url" rel="index">
+                    <span itemprop="name">doris</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Apache Doris 源码分析3 - AST的语义分析</span><br><span class="line">-- yakun</span><br><span class="line">-- 2022-07-10 20:50:43</span><br><span class="line">-- Apache Doris 源码基于 branch-0.15, commit: a1d1bd8965c3b97f2c4eaf4fd8405efd3b35368a</span><br></pre></td></tr></table></figure>
+
+<p>上回分析了 SQL 是如何从一个平平无奇的字符串, 变成了一个适合分析处理的对象的(AST 抽象语法树), 这次继续分析生成 AST 对象之后的经历, 故事的起点还是回到上上次的 handleQuery().</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">//位置: fe/fe-core/src/main/java/org/apache/doris/qe/ConnectProcessor.java</span><br><span class="line"></span><br><span class="line">    private void handleQuery() &#123;</span><br><span class="line">        </span><br><span class="line">        // 忽略了一些执行前的逻辑</span><br><span class="line"></span><br><span class="line">        // execute this query.</span><br><span class="line">        StatementBase parsedStmt = null;</span><br><span class="line">        <span class="type">List</span>&lt;Pair&lt;StatementBase, Data.PQueryStatistics&gt;&gt; auditInfoList = Lists.newArrayList();</span><br><span class="line">        boolean alreadyAddedToAuditInfoList = false;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="type">List</span>&lt;StatementBase&gt; stmts = analyze(originStmt); // 重点<span class="number">1</span>: 词法分析和语法分析</span><br><span class="line">            <span class="keyword">for</span> (<span class="built_in">int</span> i = <span class="number">0</span>; i &lt; stmts.size(); ++i) &#123;</span><br><span class="line">                alreadyAddedToAuditInfoList = false;</span><br><span class="line">                ctx.getState().reset(); // 由于一个 ctx 要处理多个语句, 每个语句处理前要清理状态</span><br><span class="line">                <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    ctx.resetReturnRows();</span><br><span class="line">                &#125;</span><br><span class="line">                parsedStmt = stmts.get(i); // 取出一个 StatementBase 对象</span><br><span class="line">                parsedStmt.setOrigStmt(new OriginStatement(originStmt, i));</span><br><span class="line">                parsedStmt.setUserInfo(ctx.getCurrentUserIdentity());</span><br><span class="line">                executor = new StmtExecutor(ctx, parsedStmt); // 创建一个 StmtExecutor</span><br><span class="line">                ctx.setExecutor(executor);</span><br><span class="line">                executor.execute(); // 重点<span class="number">2</span>: 执行一条语句</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (i != stmts.size() - <span class="number">1</span>) &#123;</span><br><span class="line">                    ctx.getState().serverStatus |= MysqlServerStatusFlag.SERVER_MORE_RESULTS_EXISTS;</span><br><span class="line">                    finalizeCommand();</span><br><span class="line">                &#125;</span><br><span class="line">                auditInfoList.add(new Pair&lt;&gt;(executor.getParsedStmt(), executor.getQueryStatisticsForAuditLog()));</span><br><span class="line">                alreadyAddedToAuditInfoList = true;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; catch (IOException e) &#123;</span><br><span class="line">           // 忽略了异常处理逻辑</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // 忽略执行后的逻辑</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过上次的分析, 得知在经过词法和语法分析后, 得到了一个 AST 树的列表(每个树都对应一个完整的SQL语句).接下来就是遍历每一个 AST 的对象 StatementBase, 然后为每个对象初始化一个 StmtExecutor, 之后调用executor.execute() 去执行, 下面直接进入执行的逻辑:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/qe/StmtExecutor.java</span><br><span class="line">    </span><br><span class="line">    // query <span class="keyword">with</span> a random sql</span><br><span class="line">    public void execute() throws Exception &#123;</span><br><span class="line">        UUID uuid = UUID.randomUUID();</span><br><span class="line">        TUniqueId queryId = new TUniqueId(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());</span><br><span class="line">        execute(queryId);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的逻辑中分配了一个唯一标识, 然后继续:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/qe/StmtExecutor.java</span><br><span class="line"></span><br><span class="line">    public void execute(TUniqueId queryId) throws Exception &#123;</span><br><span class="line">        context.setStartTime();</span><br><span class="line"></span><br><span class="line">        plannerProfile.setQueryBeginTime(); </span><br><span class="line">        // 这个细节可以关注一下: </span><br><span class="line">        // QueryPlannerProfile 里面一共有如下的几个时间点记录:</span><br><span class="line">        //    - queryBeginTime : 查询开始时间点</span><br><span class="line">        //    - queryAnalysisFinishTime : 查询分析完成时间点</span><br><span class="line">        //    - queryPlanFinishTime : 查询计划完成时间点</span><br><span class="line">        //    - queryScheduleFinishTime : 调度完成时间点</span><br><span class="line">        //    - queryFetchResultFinishTime : 获得结果完成时间点</span><br><span class="line">        // 当前是第一个时间点: 开始时间点</span><br><span class="line">        // 通过这几个时间点, 可以猜到后面会经历如下几个阶段: <span class="number">1.</span>查询分析, <span class="number">2.</span>查询计划生成, <span class="number">3.</span>调度完成, <span class="number">4.</span>获得结果完成</span><br><span class="line">        // 在下面的两个重点函数调用, 重点函数<span class="number">1</span>对应前两阶段, 重点函数<span class="number">2</span>对应后两阶段</span><br><span class="line">        </span><br><span class="line">        context.setStmtId(STMT_ID_GENERATOR.incrementAndGet());</span><br><span class="line"></span><br><span class="line">        context.setQueryId(queryId);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (context.isTxnModel() &amp;&amp; !(parsedStmt instanceof InsertStmt)</span><br><span class="line">                    &amp;&amp; !(parsedStmt instanceof TransactionStmt)) &#123;</span><br><span class="line">                // 只有在 insert 语句中才能使用事务(transaction简称Txn)</span><br><span class="line">                throw new TException(<span class="string">&quot;This is in a transaction, only insert, commit, rollback is acceptable.&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            // support select hint e.g. select /*+ SET_VAR(query_timeout=<span class="number">1</span>) */ sleep(<span class="number">3</span>);</span><br><span class="line">            // 分析并获取语句中的所有 hint 变量, hint 变量可以理解为一些指令</span><br><span class="line">            // 场景比如写 SQL 的人对实际的数据更了解, 可以下发指令去执行特定的 join, 而不是优化器自己选</span><br><span class="line">            // 比如说 SELECT /*+ SET_VAR(query_timeout = <span class="number">1</span>) */ * FROM A; 表示这个语句超过<span class="number">1</span>秒就超时</span><br><span class="line">            // 注意注释必须以 /*+ 开头，并且只能跟随在SELECT之后</span><br><span class="line">            // 支持的变量有很多, 可以参考: fe/fe-core/src/main/java/org/apache/doris/qe/SessionVariable.java</span><br><span class="line">            analyzeVariablesInStmt();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (!context.isTxnModel()) &#123;</span><br><span class="line">                // analyze this query</span><br><span class="line">                // 重点函数<span class="number">1</span>: 分析 AST 并产生执行计划</span><br><span class="line">                analyze(context.getSessionVariable().toThrift());</span><br><span class="line">                <span class="keyword">if</span> (isForwardToMaster()) &#123;</span><br><span class="line">                    forwardToMaster();</span><br><span class="line">                    <span class="keyword">if</span> (masterOpExecutor != null &amp;&amp; masterOpExecutor.getQueryId() != null) &#123;</span><br><span class="line">                        context.setQueryId(masterOpExecutor.getQueryId());</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    LOG.debug(<span class="string">&quot;no need to transfer to Master. stmt: &#123;&#125;&quot;</span>, context.getStmtId());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                analyzer = new Analyzer(context.getCatalog(), context);</span><br><span class="line">                parsedStmt.analyze(analyzer);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (parsedStmt instanceof QueryStmt) &#123; // 只看查询语句的部分</span><br><span class="line">                context.getState().setIsQuery(true);</span><br><span class="line">                MetricRepo.COUNTER_QUERY_BEGIN.increase(<span class="number">1L</span>);</span><br><span class="line">                <span class="built_in">int</span> retryTime = Config.max_query_retry_time;</span><br><span class="line">                <span class="keyword">for</span> (<span class="built_in">int</span> i = <span class="number">0</span>; i &lt; retryTime; i ++) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        //reset query <span class="built_in">id</span> <span class="keyword">for</span> each retry</span><br><span class="line">                        <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                            UUID uuid = UUID.randomUUID();</span><br><span class="line">                            TUniqueId newQueryId = new TUniqueId(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());</span><br><span class="line">                            AuditLog.getQueryAudit().log(<span class="string">&quot;Query &#123;&#125; &#123;&#125; times with new query id: &#123;&#125;&quot;</span>, DebugUtil.printId(queryId), i, DebugUtil.printId(newQueryId));</span><br><span class="line">                            context.setQueryId(newQueryId);</span><br><span class="line">                        &#125;</span><br><span class="line">                        // 重点函数<span class="number">2</span>: 调度并获得执行结果</span><br><span class="line">                        handleQueryStmt();</span><br><span class="line">                        // explain query stmt do <span class="keyword">not</span> have profile</span><br><span class="line">                        <span class="keyword">if</span> (!((QueryStmt) parsedStmt).isExplain()) &#123;</span><br><span class="line">                            writeProfile(true);</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125; catch (RpcException e) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (i == retryTime - <span class="number">1</span>) &#123;</span><br><span class="line">                            throw e;</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">if</span> (!context.getMysqlChannel().isSend()) &#123;</span><br><span class="line">                            LOG.warn(<span class="string">&quot;retry &#123;&#125; times. stmt: &#123;&#125;&quot;</span>, (i + <span class="number">1</span>), parsedStmt.getOrigStmt().originStmt);</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            throw e;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                        QeProcessorImpl.INSTANCE.unregisterQuery(context.queryId());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                // 忽略其它类型语句的处理逻辑</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; catch (IOException e) &#123;</span><br><span class="line">            // 忽略异常处理逻辑</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            // 忽略善后处理逻辑</span><br><span class="line">        &#125;</span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+
+<p>上述代码中标记了2个重点函数, 分别是:</p>
+<ul>
+<li>重点函数1: 分析 AST 并产生执行计划</li>
+<li>重点函数2: 调度并获得执行结果</li>
+</ul>
+<p>下面依次分析这2部分内容.</p>
+<h1 id="分析-AST-并产生执行计划"><a href="#分析-AST-并产生执行计划" class="headerlink" title="分析 AST 并产生执行计划"></a>分析 AST 并产生执行计划</h1><p>先分析一下上面的 analyze(context.getSessionVariable().toThrift()); 函数的内部逻辑如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/qe/StmtExecutor.java</span><br><span class="line"></span><br><span class="line">    // Analyze one statement to structure <span class="keyword">in</span> memory.</span><br><span class="line">    public void analyze(TQueryOptions tQueryOptions) throws UserException &#123;</span><br><span class="line">        LOG.info(<span class="string">&quot;begin to analyze stmt: &#123;&#125;, forwarded stmt id: &#123;&#125;&quot;</span>, context.getStmtId(), context.getForwardedStmtId());</span><br><span class="line"></span><br><span class="line">        // 由于已经做过了词法和语法分析, 这个函数进去后会很快跳出来</span><br><span class="line">        // 为什么需要这个方法: 主要目的是会存在一些情况, 非 Master 的 FE 收到到了语句, 需要转交 Master 处理</span><br><span class="line">        // Master 在收到消息后, 还需要再重新走一遍词法和语法分析</span><br><span class="line">        parse(); </span><br><span class="line"></span><br><span class="line">        // yiguolei: insert stmt<span class="string">&#x27;s grammar analysis will write editlog, so that we check if the stmt should be forward to master here</span></span><br><span class="line"><span class="string">        // if the stmt should be forward to master, then just return here and the master will do analysis again</span></span><br><span class="line"><span class="string">        if (isForwardToMaster()) &#123;</span></span><br><span class="line"><span class="string">            return;</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">        </span></span><br><span class="line"><span class="string">        analyzer = new Analyzer(context.getCatalog(), context);</span></span><br><span class="line"><span class="string">        // Convert show statement to select statement here</span></span><br><span class="line"><span class="string">        if (parsedStmt instanceof ShowStmt) &#123; // 把 ShowStmt 类型转换为 SelectStmt</span></span><br><span class="line"><span class="string">            SelectStmt selectStmt = ((ShowStmt) parsedStmt).toSelectStmt(analyzer);</span></span><br><span class="line"><span class="string">            if (selectStmt != null) &#123;</span></span><br><span class="line"><span class="string">                parsedStmt = selectStmt;</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        if (parsedStmt instanceof QueryStmt</span></span><br><span class="line"><span class="string">                || parsedStmt instanceof InsertStmt</span></span><br><span class="line"><span class="string">                || parsedStmt instanceof CreateTableAsSelectStmt) &#123;</span></span><br><span class="line"><span class="string">            Map&lt;Long, Table&gt; tableMap = Maps.newTreeMap();</span></span><br><span class="line"><span class="string">            QueryStmt queryStmt;</span></span><br><span class="line"><span class="string">            Set&lt;String&gt; parentViewNameSet = Sets.newHashSet();</span></span><br><span class="line"><span class="string">            if (parsedStmt instanceof QueryStmt) &#123;</span></span><br><span class="line"><span class="string">                queryStmt = (QueryStmt) parsedStmt;</span></span><br><span class="line"><span class="string">                </span></span><br><span class="line"><span class="string">                // 从 queryStmt 内部的 fromClause_ 对象中解析出来所有的表放到 tableMap 中</span></span><br><span class="line"><span class="string">                queryStmt.getTables(analyzer, tableMap, parentViewNameSet);</span></span><br><span class="line"><span class="string">            &#125; else if (parsedStmt instanceof CreateTableAsSelectStmt) &#123;</span></span><br><span class="line"><span class="string">                CreateTableAsSelectStmt parsedStmt = (CreateTableAsSelectStmt) this.parsedStmt;</span></span><br><span class="line"><span class="string">                queryStmt = parsedStmt.getQueryStmt();</span></span><br><span class="line"><span class="string">                queryStmt.getTables(analyzer, tableMap, parentViewNameSet);</span></span><br><span class="line"><span class="string">            &#125; else &#123;</span></span><br><span class="line"><span class="string">                InsertStmt insertStmt = (InsertStmt) parsedStmt;</span></span><br><span class="line"><span class="string">                insertStmt.getTables(analyzer, tableMap, parentViewNameSet);</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">            // table id in tableList is in ascending order because that table map is a sorted map</span></span><br><span class="line"><span class="string">            </span></span><br><span class="line"><span class="string">            // 将 tables 将 table id 排序转换为 List 结构的 tables</span></span><br><span class="line"><span class="string">            List&lt;Table&gt; tables = Lists.newArrayList(tableMap.values());</span></span><br><span class="line"><span class="string">            </span></span><br><span class="line"><span class="string">            // 为这些 tables 内的每个 table 对象加上读锁</span></span><br><span class="line"><span class="string">            MetaLockUtils.readLockTables(tables);</span></span><br><span class="line"><span class="string">            try &#123;</span></span><br><span class="line"><span class="string">                analyzeAndGenerateQueryPlan(tQueryOptions); // 重点: 分析并生成查询计划</span></span><br><span class="line"><span class="string">            &#125; catch (MVSelectFailedException e) &#123;</span></span><br><span class="line"><span class="string">                // 忽略异常处理代码</span></span><br><span class="line"><span class="string">            &#125; finally &#123;</span></span><br><span class="line"><span class="string">                // 释放所有读锁</span></span><br><span class="line"><span class="string">                MetaLockUtils.readUnlockTables(tables);</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">        &#125; else &#123;</span></span><br><span class="line"><span class="string">            try &#123;</span></span><br><span class="line"><span class="string">                parsedStmt.analyze(analyzer);</span></span><br><span class="line"><span class="string">            &#125; catch (UserException e) &#123;</span></span><br><span class="line"><span class="string">                throw e;</span></span><br><span class="line"><span class="string">            &#125; catch (Exception e) &#123;</span></span><br><span class="line"><span class="string">                LOG.warn(&quot;Analyze failed because &quot;, e);</span></span><br><span class="line"><span class="string">                throw new AnalysisException(&quot;Unexpected exception: &quot; + e.getMessage());</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里继续看一下新的重点工作: 分析并生成查询计划 analyzeAndGenerateQueryPlan(tQueryOptions);函数</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/qe/StmtExecutor.java</span><br><span class="line"></span><br><span class="line">    private void analyzeAndGenerateQueryPlan(TQueryOptions tQueryOptions) throws UserException &#123;</span><br><span class="line">        // 重点a: 调用 parsedStmt 的 analyze 方法</span><br><span class="line">        parsedStmt.analyze(analyzer);</span><br><span class="line">        <span class="keyword">if</span> (parsedStmt instanceof QueryStmt || parsedStmt instanceof InsertStmt) &#123;</span><br><span class="line">            ExprRewriter rewriter = analyzer.getExprRewriter();</span><br><span class="line">            rewriter.reset();</span><br><span class="line">            <span class="keyword">if</span> (context.getSessionVariable().isEnableFoldConstantByBe()) &#123;</span><br><span class="line">                // fold constant expr</span><br><span class="line">                parsedStmt.foldConstant(rewriter);</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line">            // Apply expr <span class="keyword">and</span> subquery rewrites.</span><br><span class="line">            ExplainOptions explainOptions = parsedStmt.getExplainOptions();</span><br><span class="line">            boolean reAnalyze = false;</span><br><span class="line"></span><br><span class="line">            // 重点b: 调用 parsedStmt 的 rewriteExprs 方法</span><br><span class="line">            parsedStmt.rewriteExprs(rewriter);</span><br><span class="line">            reAnalyze = rewriter.changed();</span><br><span class="line">            <span class="keyword">if</span> (analyzer.containSubquery()) &#123;</span><br><span class="line">                parsedStmt = StmtRewriter.rewrite(analyzer, parsedStmt);</span><br><span class="line">                reAnalyze = true;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (reAnalyze) &#123;</span><br><span class="line">                // The rewrites should have no user-visible effect. Remember the original result</span><br><span class="line">                // types <span class="keyword">and</span> column labels to restore them after the rewritten stmt has been</span><br><span class="line">                // reset() <span class="keyword">and</span> re-analyzed.</span><br><span class="line">                <span class="type">List</span>&lt;<span class="type">Type</span>&gt; origResultTypes = Lists.newArrayList();</span><br><span class="line">                <span class="keyword">for</span> (Expr e: parsedStmt.getResultExprs()) &#123;</span><br><span class="line">                    origResultTypes.add(e.getType());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="type">List</span>&lt;String&gt; origColLabels =</span><br><span class="line">                        Lists.newArrayList(parsedStmt.getColLabels());</span><br><span class="line"></span><br><span class="line">                // Re-analyze the stmt <span class="keyword">with</span> a new analyzer.</span><br><span class="line">                analyzer = new Analyzer(context.getCatalog(), context);</span><br><span class="line"></span><br><span class="line">                // query re-analyze</span><br><span class="line">                parsedStmt.reset();</span><br><span class="line">                parsedStmt.analyze(analyzer);</span><br><span class="line"></span><br><span class="line">                // Restore the original result types <span class="keyword">and</span> column labels.</span><br><span class="line">                parsedStmt.castResultExprs(origResultTypes);</span><br><span class="line">                parsedStmt.setColLabels(origColLabels);</span><br><span class="line">                <span class="keyword">if</span> (LOG.isTraceEnabled()) &#123;</span><br><span class="line">                    LOG.trace(<span class="string">&quot;rewrittenStmt: &quot;</span> + parsedStmt.toSql());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (explainOptions != null) parsedStmt.setIsExplain(explainOptions);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        // 参考前面说过的后面会经历的几个阶段: <span class="number">1.</span>查询分析, <span class="number">2.</span>查询计划生成, <span class="number">3.</span>调度, <span class="number">4.</span>获得结果 </span><br><span class="line">        // 至此为止, 完成了第<span class="number">1</span>个阶段:查询分析, 下面这条语句记录了完成时间点</span><br><span class="line">        plannerProfile.setQueryAnalysisFinishTime();</span><br><span class="line">        // 后面的部分, 就进入了第<span class="number">2</span>个阶段:查询计划生成</span><br><span class="line"></span><br><span class="line">        // create plan</span><br><span class="line">        planner = new Planner();</span><br><span class="line">        <span class="keyword">if</span> (parsedStmt instanceof QueryStmt || parsedStmt instanceof InsertStmt) &#123;</span><br><span class="line">            // 重点c: 生成执行计划</span><br><span class="line">            planner.plan(parsedStmt, analyzer, tQueryOptions);</span><br><span class="line">        &#125;</span><br><span class="line">        // TODO(zc):</span><br><span class="line">        // Preconditions.checkState(!analyzer.hasUnassignedConjuncts());</span><br><span class="line"></span><br><span class="line">        plannerProfile.setQueryPlanFinishTime();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的代码片段中, 有几个重点工作需要继续跟进分析一下:</p>
+<ul>
+<li>重点a: 分析: 调用 parsedStmt 的 analyze 方法</li>
+<li>重点b: 重写: 调用 parsedStmt 的 rewriteExprs 方法</li>
+<li>重点c: 生成执行计划</li>
+</ul>
+<p>下面分别跟进一下.</p>
+<h2 id="分析-调用-parsedStmt-的-analyze-方法"><a href="#分析-调用-parsedStmt-的-analyze-方法" class="headerlink" title="分析: 调用 parsedStmt 的 analyze 方法"></a>分析: 调用 parsedStmt 的 analyze 方法</h2><p>上次源码学习的最后提到过的 analyze(Analyzer analyzer) 方法, 在这里终于被调用了, 这个方法名字叫 analyze 但是我觉得叫 prepare 也很合适, 主要包含一系列的准备工作, 下面咱们以 SelectStmt 语句的这个方法为入口, 继续跟进:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br></pre></td><td class="code"><pre><span class="line">// 位置: fe/fe-core/src/main/java/org/apache/doris/analysis/SelectStmt.java</span><br><span class="line">    </span><br><span class="line">    public void analyze(Analyzer analyzer) throws UserException &#123;</span><br><span class="line">        <span class="keyword">if</span> (isAnalyzed()) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="built_in">super</span>.analyze(analyzer);</span><br><span class="line">        fromClause_.setNeedToSql(needToSql);</span><br><span class="line">        fromClause_.analyze(analyzer); // 对于 <span class="keyword">from</span> 语句进行分析, 会取出依赖的表</span><br><span class="line"></span><br><span class="line">        // Generate !empty() predicates to <span class="built_in">filter</span> out empty collections.</span><br><span class="line">        // Skip this step when analyzing a WITH-clause because CollectionTableRefs</span><br><span class="line">        // do <span class="keyword">not</span> register collection slots <span class="keyword">in</span> their parent <span class="keyword">in</span> that context</span><br><span class="line">        // (see CollectionTableRef.analyze()).</span><br><span class="line">        <span class="keyword">if</span> (!analyzer.isWithClause()) &#123;</span><br><span class="line">            registerIsNotEmptyPredicates(analyzer);</span><br><span class="line">        &#125;</span><br><span class="line">        // populate selectListExprs, aliasSMap, groupingSmap <span class="keyword">and</span> colNames</span><br><span class="line">        <span class="keyword">for</span> (SelectListItem item : selectList.getItems()) &#123; // 填充要选择的字段 (其实就是结果字段)</span><br><span class="line">            <span class="keyword">if</span> (item.isStar()) &#123; // 像 select * 这种情况要把 * 展开</span><br><span class="line">                TableName tblName = item.getTblName();</span><br><span class="line">                <span class="keyword">if</span> (tblName == null) &#123;</span><br><span class="line">                    expandStar(analyzer);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    expandStar(analyzer, tblName); </span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                // Analyze the resultExpr before generating a label to ensure enforcement</span><br><span class="line">                // of expr child <span class="keyword">and</span> depth limits (toColumn() label may call toSql()).</span><br><span class="line">                item.getExpr().analyze(analyzer);</span><br><span class="line">                <span class="keyword">if</span> (!(item.getExpr() instanceof CaseExpr) &amp;&amp;</span><br><span class="line">                        item.getExpr().contains(Predicates.instanceOf(Subquery.<span class="keyword">class</span>))) &#123;</span><br><span class="line">                    throw new AnalysisException(<span class="string">&quot;Subquery is not supported in the select list.&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                </span><br><span class="line">                // 这里会根据预置的几条规划, 进行重写, 主要目的为了提升执行效率</span><br><span class="line">                // 比如, 把 count(distinct k2) 重写为 bitmap_union_count(to_bitmap(k2))</span><br><span class="line">                Expr expr = rewriteQueryExprByMvColumnExpr(item.getExpr(), analyzer); </span><br><span class="line">                resultExprs.add(expr);</span><br><span class="line">                SlotRef aliasRef = new SlotRef(null, item.toColumnLabel());</span><br><span class="line">                Expr existingAliasExpr = aliasSMap.get(aliasRef);</span><br><span class="line">                <span class="keyword">if</span> (existingAliasExpr != null &amp;&amp; !existingAliasExpr.equals(item.getExpr())) &#123;</span><br><span class="line">                    // If we have already seen this alias, it refers to more than one column <span class="keyword">and</span></span><br><span class="line">                    // therefore <span class="keyword">is</span> ambiguous.</span><br><span class="line">                    ambiguousAliasList.add(aliasRef);</span><br><span class="line">                &#125;</span><br><span class="line">                aliasSMap.put(aliasRef, item.getExpr().clone());</span><br><span class="line">                colLabels.add(item.toColumnLabel());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        // 对 group by 语句进行分析, 如果有问题就直接抛出异常</span><br><span class="line">        <span class="keyword">if</span> (groupByClause != null &amp;&amp; groupByClause.isGroupByExtension()) &#123; </span><br><span class="line">            <span class="keyword">for</span> (SelectListItem item : selectList.getItems()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (item.getExpr() instanceof FunctionCallExpr &amp;&amp; item.getExpr().fn instanceof AggregateFunction) &#123;</span><br><span class="line">                    <span class="keyword">for</span> (Expr expr: groupByClause.getGroupingExprs()) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (item.getExpr().contains(expr)) &#123;</span><br><span class="line">                            throw new AnalysisException(<span class="string">&quot;column: &quot;</span> + expr.toSql() + <span class="string">&quot; cannot both in select list and &quot;</span></span><br><span class="line">                                    + <span class="string">&quot;aggregate functions when using GROUPING SETS/CUBE/ROLLUP, please use union&quot;</span></span><br><span class="line">                                    + <span class="string">&quot; instead.&quot;</span>);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            groupingInfo = new GroupingInfo(analyzer, groupByClause.getGroupingType());</span><br><span class="line">            groupingInfo.substituteGroupingFn(resultExprs, analyzer);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">for</span> (Expr expr : resultExprs) &#123;</span><br><span class="line">                <span class="keyword">if</span> (checkGroupingFn(expr)) &#123;</span><br><span class="line">                    throw new AnalysisException(</span><br><span class="line">                            <span class="string">&quot;cannot use GROUPING functions without [grouping sets|rollup|cube] &quot;</span></span><br><span class="line">                                    + <span class="string">&quot;clause or grouping sets only have one element.&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (valueList != null) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!fromInsert) &#123;</span><br><span class="line">                // 如果不来自 insert 语句,比如 SELECT DISTINCT * FROM (VALUES (<span class="number">1</span>), (<span class="number">5</span>), (<span class="number">1</span>), (<span class="number">6</span>)) AS X(a)</span><br><span class="line">                // 对 valuesList 中的每个 value 进行分析</span><br><span class="line">                valueList.analyzeForSelect(analyzer);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (Expr expr : valueList.getFirstRow()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (expr instanceof DefaultValueExpr) &#123;</span><br><span class="line">                    resultExprs.add(new IntLiteral(<span class="number">1</span>));</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    resultExprs.add(expr);</span><br><span class="line">                &#125;</span><br><span class="line">                colLabels.add(expr.toColumnLabel());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        // analyze valueList <span class="keyword">if</span> exists</span><br><span class="line">        <span class="keyword">if</span> (needToSql) &#123;</span><br><span class="line">            originalExpr = Expr.cloneList(resultExprs);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // analyze selectListExprs</span><br><span class="line">        Expr.analyze(resultExprs, analyzer);</span><br><span class="line">        <span class="keyword">if</span> (TreeNode.contains(resultExprs, AnalyticExpr.<span class="keyword">class</span>)) &#123;</span><br><span class="line">            // 如果语句中包含分析函数语法: func(arg1,arg2,...) over ([partition by] [order by] [windowing-clause])</span><br><span class="line">            // 就再执行下面的两个分析</span><br><span class="line">            <span class="keyword">if</span> (fromClause_.isEmpty()) &#123;</span><br><span class="line">                throw new AnalysisException(<span class="string">&quot;Analytic expressions require FROM clause.&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            // do this here, <span class="keyword">not</span> after analyzeAggregation(), otherwise the AnalyticExprs</span><br><span class="line">            // will get substituted away</span><br><span class="line">            <span class="keyword">if</span> (selectList.isDistinct()) &#123;</span><br><span class="line">                throw new AnalysisException(</span><br><span class="line">                        <span class="string">&quot;cannot combine SELECT DISTINCT with analytic functions&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        whereClauseRewrite(); // 简单的的改写: 如果是整数表达式的话就改为<span class="built_in">bool</span>表达式</span><br><span class="line">        <span class="keyword">if</span> (whereClause != null) &#123;// 如果 where 语句不为空, 就进行下面的句法校验</span><br><span class="line">            <span class="keyword">if</span> (checkGroupingFn(whereClause)) &#123;</span><br><span class="line">                throw new AnalysisException(<span class="string">&quot;grouping operations are not allowed in WHERE.&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            whereClause.analyze(analyzer);</span><br><span class="line">            <span class="keyword">if</span> (whereClause.containsAggregate()) &#123;</span><br><span class="line">                ErrorReport.reportAnalysisException(ErrorCode.ERR_INVALID_GROUP_FUNC_USE);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            whereClause.checkReturnsBool(<span class="string">&quot;WHERE clause&quot;</span>, false);</span><br><span class="line">            Expr e = whereClause.findFirstOf(AnalyticExpr.<span class="keyword">class</span>);</span><br><span class="line">            <span class="keyword">if</span> (e != null) &#123;</span><br><span class="line">                throw new AnalysisException(</span><br><span class="line">                        <span class="string">&quot;WHERE clause must not contain analytic expressions: &quot;</span> + e.toSql());</span><br><span class="line">            &#125;</span><br><span class="line">            analyzer.registerConjuncts(whereClause, false, getTableRefIds());</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // 根据 order by 语句来生成排序信息</span><br><span class="line">        createSortInfo(analyzer);</span><br><span class="line">        // 上面这个函数会生成一个 sortInfo 对象, 主要包含三个成员:</span><br><span class="line">        // <span class="number">1.</span> 按哪些表达式来排序</span><br><span class="line">        // <span class="number">2.</span> 升序还是降序: ASC / DESC </span><br><span class="line">        // <span class="number">3.</span> 空值在前还是在后: NULLS FIRST / NULLS LAST / 不声明</span><br><span class="line">        <span class="keyword">if</span> (sortInfo != null &amp;&amp; CollectionUtils.isNotEmpty(sortInfo.getOrderingExprs())) &#123;</span><br><span class="line">            <span class="keyword">if</span> (groupingInfo != null) &#123;</span><br><span class="line">                // <span class="type">List</span> of executable exprs <span class="keyword">in</span> select clause has been substituted, only the unique expr <span class="keyword">in</span> Ordering</span><br><span class="line">                // exprs needs to be substituted.</span><br><span class="line">                // Otherwise, <span class="keyword">if</span> substitute twice <span class="keyword">for</span> `Grouping Func Expr`, a null pointer will be reported.</span><br><span class="line">                <span class="type">List</span>&lt;Expr&gt; orderingExprNotInSelect = sortInfo.getOrderingExprs().stream()</span><br><span class="line">                        .<span class="built_in">filter</span>(item -&gt; !resultExprs.contains(item)).collect(Collectors.toList());</span><br><span class="line">                groupingInfo.substituteGroupingFn(orderingExprNotInSelect, analyzer);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        // 分析所有与聚合相关的组件, 包括 having 语句, group by, distinct, order by 等, 这个函数很长, 有兴趣可以自己看看</span><br><span class="line">        analyzeAggregation(analyzer);</span><br><span class="line">        createAnalyticInfo(analyzer);</span><br><span class="line">        <span class="keyword">if</span> (evaluateOrderBy) &#123;</span><br><span class="line">            // 判断 order by 里面是不是复杂类型</span><br><span class="line">            createSortTupleInfo(analyzer);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (needToSql) &#123;</span><br><span class="line">            // 把语法树结构再重新生成 sql 字符串</span><br><span class="line">            sqlString_ = toSql();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!analyzer.safeIsEnableJoinReorderBasedCost()) &#123; </span><br><span class="line">            // 在 select A,B,C <span class="keyword">from</span> .. 这种语句中, </span><br><span class="line">            // 如果不是基于代价的重排各个表 join 的顺序,</span><br><span class="line">            // 使用下面的基于各个表的总行数的排序作为 join 数据</span><br><span class="line">            LOG.debug(<span class="string">&quot;use old reorder logical in select stmt&quot;</span>);</span><br><span class="line">            reorderTable(analyzer);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // An inline view <span class="keyword">is</span> a query statement <span class="keyword">with</span> an alias.</span><br><span class="line">        resolveInlineViewRefs(analyzer);</span><br><span class="line"></span><br><span class="line">        // Indicates whether the select-project-join (spj) portion of this query block</span><br><span class="line">        // <span class="keyword">is</span> guaranteed to <span class="keyword">return</span> an empty result <span class="built_in">set</span>. </span><br><span class="line">        // <span class="type">Set</span> due to a constant non-Having conjunct evaluating to false.</span><br><span class="line">        <span class="keyword">if</span> (analyzer.hasEmptySpjResultSet() &amp;&amp; aggInfo == null) &#123;</span><br><span class="line">            analyzer.setHasEmptyResultSet();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (aggInfo != null) &#123;</span><br><span class="line">            <span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">                LOG.debug(<span class="string">&quot;post-analysis &quot;</span> + aggInfo.debugString());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        // 如果有 INTO OUTFILE 语句</span><br><span class="line">        <span class="keyword">if</span> (hasOutFileClause()) &#123;</span><br><span class="line">            // 分析一下目标路径是否合法</span><br><span class="line">            // 分析一下目标文件类型是什么: 目前只支持 csv, parquet 两种类型, 其它类型会报错</span><br><span class="line">            outFileClause.analyze(analyzer, resultExprs);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+<pre><code>  File &quot;&lt;ipython-input-1-1f43be866131&gt;&quot;, line 1
+    (/, 位置:, fe/fe-core/src/main/java/org/apache/doris/analysis/SelectStmt.java)
+     ^
+SyntaxError: invalid syntax
+</code></pre>
+<p>以上就是第一步, 对抽象语法树的全部分析过程了, 可以看到, 针对每个语句能支持的语法情况, 对它内部的各个成员对象都进行了分析, 很多成员对象本身也是由内部的多个成员组成的复合型对象, 针对这种情况也会递归的调用其内部的 analyze.</p>
+<p>以上就是语义分析的全部内容了, 想了解更多语句的语义分析细节, 可以自行到源码中去检阅.</p>
+<h1 id="关于词法-语法-语义分析的对比"><a href="#关于词法-语法-语义分析的对比" class="headerlink" title="关于词法, 语法, 语义分析的对比"></a>关于词法, 语法, 语义分析的对比</h1><p>这里咱们总结一下 词法分析, 语法分析, 语义分析 的区别:</p>
+<ul>
+<li>词法分析: 把一个 sql 字符串按照规则生成一系列的单词 (或本身是一个用来吐出单词的扫描器)</li>
+<li>语法分析: 把一系列的单词按照句子语法的规划生成一系列的语句</li>
+<li>语义分析: 对一个句子的成员细节进行判断, 是否合理</li>
+</ul>
+<p>分别举个例子会更好理解一些:</p>
+<ul>
+<li>“我 一明比 年小 岁年今”: 这句话在词法分析阶段就会返回异常, 主要原因是有些词, 比如”一明比”不是一个合法的单词.</li>
+<li>“小 我 明年 今年 一岁 比”: 这句话在语法分析阶段返回异常, 虽然每个单词都合法, 但是单词组合起来不是符合任何主谓宾这样的语法.</li>
+<li>“我 明年 比 今年 小 一岁”: 这句话可以通过词法和语法的检查, 但是在语义分析时会报异常, 主要原因是这句话的语义是不成立的.</li>
+<li>“我 今年 比 明年 小 一岁”: 这句话可以通过所有的检查.</li>
+</ul>
+<p>如果学过编译原理, 会发现这面的这三步都是经典的编译原理的部分, 感兴趣也可以自己去学习一下.</p>
+<p>后面的章节, 咱们会讨论语句的重写, 这一步非常关键, 之所以 sql 可以如此普及, 很大一部分的原因还是在于用户的 sql 代码可以随便写, 底层会在保证结果正确的前提之下, 会以性能更优的方式去进行重写和执行.</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/doris/" rel="tag"># doris</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/02/08/Apache-Doris-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902-%E8%AF%8D%E6%B3%95%E5%88%86%E6%9E%90%E5%92%8C%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90/" rel="next" title="Apache Doris 源码分析2 - 词法分析和语法分析">
+                <i class="fa fa-chevron-left"></i> Apache Doris 源码分析2 - 词法分析和语法分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%20%7C%7C%20archive">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/yoelee" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:li.ya.kun@163.com" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%86%E6%9E%90-AST-%E5%B9%B6%E4%BA%A7%E7%94%9F%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92"><span class="nav-number">1.</span> <span class="nav-text">分析 AST 并产生执行计划</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90-%E8%B0%83%E7%94%A8-parsedStmt-%E7%9A%84-analyze-%E6%96%B9%E6%B3%95"><span class="nav-number">1.1.</span> <span class="nav-text">分析: 调用 parsedStmt 的 analyze 方法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E8%AF%8D%E6%B3%95-%E8%AF%AD%E6%B3%95-%E8%AF%AD%E4%B9%89%E5%88%86%E6%9E%90%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="nav-number">2.</span> <span class="nav-text">关于词法, 语法, 语义分析的对比</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">亚坤</span>
+
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
